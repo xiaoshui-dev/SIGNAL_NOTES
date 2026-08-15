@@ -14,7 +14,8 @@ public class PostService {
     private final PostRepository posts;
     private final CategoryRepository categories;
     private final PostRevisionRepository revisions;
-    public PostService(PostRepository posts, CategoryRepository categories, PostRevisionRepository revisions) { this.posts = posts; this.categories = categories; this.revisions = revisions; }
+    private final TagRepository tags;
+    public PostService(PostRepository posts, CategoryRepository categories, PostRevisionRepository revisions,TagRepository tags) { this.posts = posts; this.categories = categories; this.revisions = revisions; this.tags=tags; }
 
     @Transactional(readOnly = true)
     public List<PostView> published(String query, String category, String tag) {
@@ -37,7 +38,7 @@ public class PostService {
         if (posts.existsBySlugAndIdNot(input.slug(), id == null ? -1L : id)) throw new IllegalArgumentException("slug 已存在");
         Category category = categories.findByName(input.category()).orElseGet(() -> { Category value = new Category(); value.setName(input.category()); value.setSlug(slugify(input.category())); value.setDescription(""); return categories.save(value); });
         post.setSlug(input.slug()); post.setTitle(input.title()); post.setExcerpt(input.excerpt() == null ? "" : input.excerpt()); post.setContent(input.content() == null ? "" : input.content()); post.setCover(input.cover()); post.setCoverAlt(input.coverAlt()); post.setCategory(category);
-        post.setTags(new LinkedHashSet<>(input.tags() == null ? List.of() : input.tags())); post.setStatus(input.status()); post.setPublishedAt(input.publishedAt()); post.setScheduledAt(input.scheduledAt()); post.setSeoTitle(input.seoTitle()); post.setSeoDescription(input.seoDescription()); post.setCanonicalUrl(input.canonicalUrl()); post.setPinned(input.pinned()); post.setDeletedAt(input.status() == PostStatus.TRASHED ? Optional.ofNullable(post.getDeletedAt()).orElse(java.time.Instant.now()) : null); post.setUpdatedAt(LocalDate.now()); post.setReadMinutes(input.readMinutes() == null ? 5 : input.readMinutes()); post.setAuthorName(input.authorName() == null ? "林默" : input.authorName());
+        Set<String> inputTags=new LinkedHashSet<>(input.tags() == null ? List.of() : input.tags());inputTags.forEach(name->tags.findByName(name).orElseGet(()->{Tag value=new Tag();value.setName(name);value.setSlug("tag-"+Integer.toUnsignedString(name.hashCode(),36));value.setDescription("");return tags.save(value);}));post.setTags(inputTags); post.setStatus(input.status()); post.setPublishedAt(input.publishedAt()); post.setScheduledAt(input.scheduledAt()); post.setSeoTitle(input.seoTitle()); post.setSeoDescription(input.seoDescription()); post.setCanonicalUrl(input.canonicalUrl()); post.setPinned(input.pinned()); post.setDeletedAt(input.status() == PostStatus.TRASHED ? Optional.ofNullable(post.getDeletedAt()).orElse(java.time.Instant.now()) : null); post.setUpdatedAt(LocalDate.now()); post.setReadMinutes(input.readMinutes() == null ? 5 : input.readMinutes()); post.setAuthorName(input.authorName() == null ? "林默" : input.authorName());
         Post saved = posts.save(post);
         PostRevision revision = new PostRevision(); revision.setPost(saved); revision.setVersionNo(revisions.findTopByPostIdOrderByVersionNoDesc(saved.getId()).map(item -> item.getVersionNo() + 1).orElse(1)); revision.setTitle(saved.getTitle()); revision.setExcerpt(saved.getExcerpt()); revision.setContent(saved.getContent()); revision.setStatus(saved.getStatus()); revision.setEditor(saved.getAuthorName()); revisions.save(revision);
         return PostView.from(saved);

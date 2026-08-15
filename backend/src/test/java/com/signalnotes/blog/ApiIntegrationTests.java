@@ -43,11 +43,13 @@ class ApiIntegrationTests {
 
     @Test void mediaMetadataCanBeUpdatedAndReferencedAssetsCannotBeDeleted() throws Exception {
         var auth = org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.httpBasic("admin", "signal2026");
-        MockMultipartFile file = new MockMultipartFile("file", "cover.png", "image/png", new byte[]{1,2,3});
+        MockMultipartFile file = new MockMultipartFile("file", "cover.png", "image/png", new byte[]{(byte)0x89,0x50,0x4e,0x47,0x0d,0x0a,0x1a,0x0a,1,2,3,4});
         String response = mvc.perform(multipart("/api/admin/media").file(file).param("altText", "原始替代文本").with(auth)).andExpect(status().isCreated()).andReturn().getResponse().getContentAsString();
         Long id = com.fasterxml.jackson.databind.json.JsonMapper.builder().build().readTree(response).get("id").longValue();
         mvc.perform(patch("/api/admin/media/{id}", id).with(auth).contentType(MediaType.APPLICATION_JSON).content("{\"filename\":\"updated.png\",\"altText\":\"更新后的替代文本\"}"))
             .andExpect(status().isOk()).andExpect(jsonPath("$.filename").value("updated.png"));
+        MockMultipartFile fake = new MockMultipartFile("file", "fake.png", "image/png", new byte[]{1,2,3});
+        mvc.perform(multipart("/api/admin/media").file(fake).with(auth)).andExpect(status().isBadRequest());
     }
 
     @Test void adminCanChangePasswordAndOldPasswordStopsWorking() throws Exception {

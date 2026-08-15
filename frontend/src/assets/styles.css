@@ -72,6 +72,10 @@
 .taxonomy-form.tag-create { grid-template-columns: 1fr auto; }
 .taxonomy-list > div { min-height: 62px; display: flex; align-items: center; gap: 13px; padding: 12px 18px; border-bottom: 1px solid var(--line); }
 .taxonomy-list > div > div { min-width: 0; display: grid; gap: 5px; }
+.taxonomy-edit-list > div { grid-template-columns: auto minmax(0,1fr) auto auto; }
+.taxonomy-edit-list > div > div { grid-template-columns: repeat(3,minmax(0,1fr)); }
+.taxonomy-edit-list.tag-list > div > div { grid-template-columns: repeat(2,minmax(0,1fr)); }
+.taxonomy-edit-list input { min-width: 0; border: 1px solid var(--line); background: transparent; color: var(--ink); padding: 8px; font-size: 10px; }
 .taxonomy-list strong { font-size: 12px; }
 .taxonomy-list small { overflow: hidden; color: var(--ink-soft); font-size: 9px; text-overflow: ellipsis; white-space: nowrap; }
 .post-admin-table .table-head, .post-admin-table .table-row { grid-template-columns: 42px minmax(0, 1fr) 100px 82px 100px 54px !important; }
