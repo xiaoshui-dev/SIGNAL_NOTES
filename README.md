@@ -15,7 +15,7 @@ cd backend
 mvn spring-boot:run
 ```
 
-默认入口：[http://127.0.0.1:5173/](http://127.0.0.1:5173/)，后台：[http://127.0.0.1:5173/admin](http://127.0.0.1:5173/admin)。演示管理员为 `admin` / `signal2026`，生产环境必须通过环境变量覆盖。
+默认入口：[http://127.0.0.1:5173/](http://127.0.0.1:5173/)，后台：[http://127.0.0.1:5173/admin](http://127.0.0.1:5173/admin)。若 5173 被占用，Vite 会选择下一可用端口。演示管理员为 `admin` / `signal2026`，生产环境必须通过 `ADMIN_USERNAME`、`ADMIN_PASSWORD` 覆盖。
 
 ## 一键运行
 
@@ -34,4 +34,4 @@ cd frontend; pnpm build
 cd ../backend; mvn test
 ```
 
-公开 API 位于 `/api/posts`、`/api/comments` 和 `/api/subscriptions`；`/api/admin/**` 使用 HTTP Basic Auth。上传只接受 JPG、PNG、WebP，最大 10MB，媒体文件保存到独立 uploads 卷。
+公开 API 位于 `/api/posts`、`/api/comments`、`/api/contact` 和 `/api/subscriptions`；`/api/admin/**` 使用 HTTP Basic Auth。上传只接受经过文件签名校验的 JPG、PNG、WebP，最大 10MB，媒体与备份分别保存到独立卷。完整需求覆盖与边界见 [BLOG_COVERAGE.md](BLOG_COVERAGE.md)。

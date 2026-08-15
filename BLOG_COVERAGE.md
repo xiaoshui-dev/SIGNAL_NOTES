@@ -1,25 +1,47 @@
 # Signal Notes 需求覆盖矩阵
 
-这份矩阵以 `BLOG_REQUIREMENTS.md` 的 P0/P1 和“按界面的验收用例”为发布门槛。每一项都对应真实路由、API、数据库迁移或自动化检查；P2 仅列为后续扩展，不伪装成首发能力。
+本文以 `BLOG_REQUIREMENTS.md` 的 P0/P1 为本地首发范围。每项能力对应真实路由、API、MySQL 表、Flyway 迁移或浏览器证据；P2 和依赖外部服务的能力单独列出，不以演示界面代替实现。
 
-| 需求域 | 实现位置 | 验证方式 |
-| --- | --- | --- |
-| 介绍页 / 科技首屏 / 动效 / 主题 | `frontend/src/views/LandingView.vue`, `frontend/src/assets/styles.css` | 浏览器桌面 + 375px 截图、键盘路径 |
-| 博客列表 / 分类筛选 / 搜索 / 订阅 | `frontend/src/views/BlogView.vue`, `frontend/src/api.js`, `/api/posts`, `/api/subscriptions` | 前端构建、API 集成测试、浏览器交互 |
-| 文章 Markdown / XSS 清理 / 目录 / 分享海报 | `frontend/src/views/ArticleView.vue`, `frontend/src/components/SharePoster.vue` | DOMPurify 单元路径、海报尺寸/二维码检查 |
-| 分类、标签、归档、作者、关于、联系、隐私 | `frontend/src/router.js`, `BlogView.vue`, `backend/src/main/java/.../controller` | 路由 smoke test、空/错误状态检查 |
-| 404/403/500/维护状态 | `frontend/src/views/StatusView.vue`, 路由兜底 | 直接访问异常路由、API 失败状态 |
-| 管理登录与最小权限 | `SecurityConfig.java`, `AdminView.vue` | 未授权 401、Basic Auth、登录失败交互 |
-| 文章草稿、审核、发布、下线、回收站、定时、置顶 | `Post.java`, `PostService.java`, `AdminView.vue`, Flyway V3+ | 状态流转测试、后台交互 |
-| 文章预览、版本、恢复、自动保存、发布检查 | `AdminView.vue`, `PostRevision.java`, revision API | 前端状态测试、集成 API |
-| 分类/标签管理 | 管理 API 与 `AdminTaxonomyView.vue` | CRUD 集成测试、重复值错误 |
-| 媒体上传与安全校验 | `MediaController.java`, `AdminView.vue`, Nginx 配置 | MIME/大小校验、上传 API |
-| 评论审核、回复、举报、反馈工单 | 评论/联系 API 与后台队列 | 状态变更集成测试、表单错误状态 |
-| 仪表盘趋势、日志、任务、备份 | 管理 dashboard/log/task/backup API | API smoke test、备份校验状态 |
-| SEO / RSS / sitemap / robots | `index.html`, `public/*.xml`, 动态 metadata helper | 构建产物检查、页面 head 检查 |
-| 响应式、无障碍、错误与加载状态 | 全局样式和各视图 | 375px 无溢出、Tab/focus、浏览器 console |
+## 公共体验
 
-## 仍属于 P2 的明确范围
+| 需求域 | 状态 | 实现与结果 | 验证 |
+| --- | --- | --- | --- |
+| 科技介绍页、动效、主题、入口 | 完成 | `/` 使用全幅科技影像、进入博客/精选入口、主题导航、回访状态和 reduced-motion 降级 | 1440x900、375x812 截图；首屏底部露出下一内容段 |
+| 博客列表、分类筛选、订阅 | 完成 | `/blog` 从 MySQL 加载公开文章，实时更新分类/标签数量，失败时保留本地内容并提供重试 | API、桌面/移动浏览器、空数据降级 |
+| 搜索 | 完成 | 标题、摘要、正文、分类、标签检索；80 字校验、结果计数、关键词高亮、分页和无结果建议 | `/blog/search?q=AI` DOM 与截图 |
+| 文章阅读 | 完成 | Markdown 清理、目录、阅读进度、代码复制、图片放大、相关文章、上下篇、打印样式 | 文章 DOM、XSS 清理路径、浏览器交互 |
+| 分享与分享图片 | 完成 | 复制链接、系统分享、横版 1200x630、竖版 1080x1440；海报含标题、摘要、封面、二维码和 canonical URL | 分享弹窗截图、QR 视觉与下载路径 |
+| 分类、标签、归档、作者 | 完成 | 独立列表/详情路由，文章数量与 MySQL 内容同步 | 路由直接访问和筛选检查 |
+| 关于、联系、隐私 | 完成 | 联系表单具备校验、幂等工单号、限流与失败保留输入；隐私/版权说明可直接访问 | API 集成测试、375px 表单截图 |
+| 评论互动 | 完成 | 评论、回复、管理员回复、举报、审核、拒绝、垃圾识别和公开/待审隔离 | 评论 API 集成测试与后台审核截图 |
+| 状态与 SEO | 完成 | 404/403/500/维护页、动态 title/description/canonical/Article JSON-LD、robots、sitemap、RSS | 直接路由、head 检查、构建产物 |
 
-多作者审批编排、2FA、专业全文搜索、国际化、多站点、推荐系统、PWA、点赞/收藏持久化和自动摘要需要独立的账户、索引或产品决策，不把本地演示状态标为已完成。
+## 管理与运营
 
+| 需求域 | 状态 | 实现与结果 | 验证 |
+| --- | --- | --- | --- |
+| 登录、退出、修改密码 | 完成 | 无状态 HTTP Basic、401、退出清理凭据；修改密码验证当前密码并使旧密码失效 | 账户集成测试 |
+| 文章工作流 | 完成 | 新建、草稿、待审、定时、发布、下线、回收站、恢复、置顶、批量状态操作 | 状态流转测试、后台列表交互 |
+| 编辑与版本 | 完成 | 自动保存、预览、发布检查、SEO/封面、版本列表和恢复为新草稿 | API 测试、桌面/移动编辑器截图 |
+| 分类与标签 | 完成 | 增删改、唯一名称/slug、文章引用检查；文章保存同步标签注册表，标签改名同步文章 | 管理 API、375px 编辑界面 |
+| 媒体库 | 完成 | JPG/PNG/WebP 上传、真实文件签名/大小校验、预览、文件名/alt 编辑、同格式替换、引用保护删除 | 伪造 MIME 拒绝测试、媒体界面截图 |
+| 评论审核 | 完成 | 通过、垃圾、删除、管理员回复；回复待审评论会同步通过原评论，举报次数和原因可见 | 集成测试、审核界面截图 |
+| 用户与权限 | 完成（本地单管理员） | 用户状态/角色 API、禁用与审计；管理 API 统一鉴权 | 401/Basic Auth 测试 |
+| 设置、分享模板 | 完成 | 站点名称、定位语、互动设置和默认海报模板持久化到 MySQL | 设置 API、后台设置页 |
+| 看板、日志、任务、备份 | 完成 | MySQL 实时统计、热门文章、审计日志；JSON 备份含任务状态、文件大小、SHA-256 和校验结果 | 真实 `VERIFIED` 备份与 64 位 checksum |
+| 安全与部署 | 完成 | CSP、Permissions-Policy、公开写接口限流、CORS、上传隔离、Docker Compose、Nginx、Flyway | 响应头、Compose 配置、MySQL 8.4 / Flyway V6 |
+
+## 明确边界
+
+- P2 未纳入本地首发：多作者审批编排、2FA、专业全文搜索引擎、国际化、多站点、PWA、点赞/收藏持久化、推荐系统、自动摘要和内容质量报表。
+- 密码找回需要邮件投递、一次性令牌和生产域名；当前本地版不提供没有真实投递能力的假找回流程。管理员密码修改在当前进程内生效，服务重启后以 `ADMIN_PASSWORD` 环境变量为准。
+- RSS 与 sitemap 为当前演示内容的静态发布文件；生产持续运营时应在构建或发布任务中按数据库内容生成。
+- 当前实现是单站点、单管理员本地发布基线。生产上线仍需替换演示密码、配置 HTTPS、真实域名、对象存储/邮件服务和异地备份策略。
+
+## 发布验证基线
+
+- 后端：12 个 Spring Boot 测试，0 失败。
+- 前端：Vue 3 + Vite 生产构建通过。
+- 数据库：MySQL 8.4，Flyway V1-V6 全部成功。
+- 运行态：`/actuator/health` 为 `UP`，公开文章 3 篇，未认证管理 API 返回 401。
+- 浏览器：1440x900 与 375x812 核心路径无整页横向溢出，无应用 console error/warn；截图保存在系统临时审查目录，不提交到仓库。

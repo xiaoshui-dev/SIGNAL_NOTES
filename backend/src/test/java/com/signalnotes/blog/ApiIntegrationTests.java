@@ -39,6 +39,11 @@ class ApiIntegrationTests {
             .andExpect(status().isOk()).andExpect(jsonPath("$.status").value("RECEIVED"));
         mvc.perform(post("/api/comments").contentType(MediaType.APPLICATION_JSON).content("{\"postSlug\":\"test-post\",\"authorName\":\"机器人\",\"content\":\"https://a.test https://b.test https://c.test 重复内容\"}"))
             .andExpect(status().isCreated()).andExpect(jsonPath("$.status").value("SPAM"));
+        var pending = new Comment(); pending.setPostSlug("test-post"); pending.setAuthorName("待审读者"); pending.setContent("等待管理员回复"); pending = comments.save(pending);
+        var auth = org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.httpBasic("admin", "signal2026");
+        mvc.perform(post("/api/admin/comments/{id}/reply", pending.getId()).with(auth).contentType(MediaType.APPLICATION_JSON).content("{\"content\":\"管理员已回复\"}"))
+            .andExpect(status().isCreated()).andExpect(jsonPath("$.parentId").value(pending.getId()));
+        Assertions.assertEquals(CommentStatus.APPROVED, comments.findById(pending.getId()).orElseThrow().getStatus());
     }
 
     @Test void mediaMetadataCanBeUpdatedAndReferencedAssetsCannotBeDeleted() throws Exception {

@@ -37,6 +37,7 @@ const related = computed(() => allPosts.value.filter((item) => item.slug !== pos
 const currentIndex = computed(() => allPosts.value.findIndex((item) => item.slug === post.value?.slug));
 const previous = computed(() => currentIndex.value > 0 ? allPosts.value[currentIndex.value - 1] : null);
 const next = computed(() => currentIndex.value >= 0 ? allPosts.value[currentIndex.value + 1] : null);
+function orderComments(list){return list.filter(item=>!item.parentId).flatMap(parent=>[parent,...list.filter(item=>item.parentId===parent.id)]);}
 
 onMounted(async () => {
   try {
@@ -53,7 +54,7 @@ onMounted(async () => {
   await nextTick();
   setupArticleInteractions();
   window.addEventListener('scroll', progress, { passive: true });
-  try { comments.value = await apiRequest(`/comments?postSlug=${route.params.slug}`); } catch { comments.value = JSON.parse(localStorage.getItem(`signal-comments-${route.params.slug}`) || '[]'); }
+  try { comments.value = orderComments(await apiRequest(`/comments?postSlug=${route.params.slug}`)); } catch { comments.value = orderComments(JSON.parse(localStorage.getItem(`signal-comments-${route.params.slug}`) || '[]')); }
 });
 
 onUnmounted(() => {
