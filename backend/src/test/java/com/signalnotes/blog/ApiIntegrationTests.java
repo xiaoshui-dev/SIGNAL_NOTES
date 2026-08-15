@@ -56,4 +56,12 @@ class ApiIntegrationTests {
         Long postId = posts.findBySlug("test-post").orElseThrow().getId();
         mvc.perform(get("/api/admin/posts/{id}/revisions", postId).with(auth)).andExpect(status().isOk());
     }
+
+    @Test void backupCreatesVerifiedArtifactVisibleInTaskList() throws Exception {
+        var auth = org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.httpBasic("admin", "signal2026");
+        mvc.perform(post("/api/admin/backups").with(auth)).andExpect(status().isOk())
+            .andExpect(jsonPath("$.verified").value(true)).andExpect(jsonPath("$.checksum").isString());
+        mvc.perform(get("/api/admin/backups").with(auth)).andExpect(status().isOk())
+            .andExpect(jsonPath("$[0].status").value("VERIFIED"));
+    }
 }

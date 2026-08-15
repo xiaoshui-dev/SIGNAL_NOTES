@@ -8,6 +8,9 @@ import java.util.*;
 public interface PostRepository extends JpaRepository<Post, Long> {
     Optional<Post> findBySlug(String slug);
     boolean existsBySlugAndIdNot(String slug, Long id);
+    long countByStatus(PostStatus status);
+    List<Post> findByStatusAndScheduledAtBefore(PostStatus status, java.time.Instant now);
+    List<Post> findTop5ByStatusOrderByViewsDesc(PostStatus status);
     @Query("""
         select distinct p from Post p left join p.tags t
         where p.status = :status

@@ -38,3 +38,4 @@ app:
     password: ${ADMIN_PASSWORD:signal2026}
   cors-origins: ${CORS_ORIGINS:http://127.0.0.1:5173,http://localhost:5173,http://127.0.0.1:5174,http://localhost:5174}
   upload-dir: ${UPLOAD_DIR:./uploads}
+  backup-dir: ${BACKUP_DIR:./backups}
