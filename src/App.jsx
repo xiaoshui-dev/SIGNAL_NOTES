@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { ArrowDown, ArrowRight, Menu, Moon, Search, Sun, X } from 'lucide-react';
 import { Link, Route, Routes, useLocation } from 'react-router-dom';
+import Blog from './Blog';
 
 function useTheme() {
   const preferred = useMemo(() => {
@@ -145,15 +146,6 @@ function LandingPage({ theme, onToggleTheme }) {
   );
 }
 
-function PlaceholderBlog({ theme, onToggleTheme }) {
-  return (
-    <main className="placeholder-page">
-      <header className="site-header"><Brand blog /><div><Link to="/">站点介绍</Link><ThemeButton theme={theme} onToggle={onToggleTheme} /></div></header>
-      <section><p className="eyebrow dark-text">BLOG / BUILDING</p><h1>文章正在接入。</h1><p>基础设计系统已经就绪，下一阶段会在这里提供文章、搜索、分类和归档。</p><Link className="button button-primary" to="/">返回介绍页</Link></section>
-    </main>
-  );
-}
-
 function ScrollToTop() {
   const { pathname } = useLocation();
   useEffect(() => {
@@ -169,7 +161,7 @@ export default function App() {
       <ScrollToTop />
       <Routes>
         <Route path="/" element={<LandingPage theme={theme} onToggleTheme={toggleTheme} />} />
-        <Route path="/blog/*" element={<PlaceholderBlog theme={theme} onToggleTheme={toggleTheme} />} />
+        <Route path="/blog/*" element={<Blog theme={theme} onToggleTheme={toggleTheme} />} />
       </Routes>
     </>
   );
