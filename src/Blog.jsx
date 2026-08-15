@@ -7,6 +7,7 @@ import {
 import { useEffect, useMemo, useState } from 'react';
 import { Link, Navigate, Route, Routes, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { categories, compactNumber, formatDate, getAuthor, posts, tags } from './data';
+import SharePoster from './SharePoster';
 
 function BlogBrand() {
   return (
@@ -98,8 +99,23 @@ function BlogHome() {
         {filtered.length ? filtered.map((post, index) => <PostCard key={post.id} post={post} large={!topic && index === 0} />) : <EmptyState title="这个主题还没有文章" copy="换一个主题，或查看全部文章。" action={<button type="button" onClick={() => setParams({})}>清除筛选</button>} />}
       </section>
       <div className="list-end"><span>END OF NOTES</span><p>已经显示全部 {filtered.length} 篇文章</p></div>
+      <SubscribeBox />
     </main>
   );
+}
+
+function SubscribeBox() {
+  const [email, setEmail] = useState('');
+  const [status, setStatus] = useState('');
+  function submit(event) {
+    event.preventDefault();
+    if (!/^\S+@\S+\.\S+$/.test(email)) { setStatus('请输入有效的邮箱地址'); return; }
+    const existing = JSON.parse(localStorage.getItem('signal-subscribers') || '[]');
+    if (!existing.includes(email.toLowerCase())) localStorage.setItem('signal-subscribers', JSON.stringify([...existing, email.toLowerCase()]));
+    setStatus('确认邮件已发送，请检查收件箱');
+    setEmail('');
+  }
+  return <section className="subscribe-box" aria-labelledby="subscribe-title"><div><span>STAY IN SIGNAL</span><h2 id="subscribe-title">每两周，收到一封有用的信。</h2><p>只发送新文章和真正值得分享的链接，不追踪打开行为。</p></div><form onSubmit={submit}><label className="sr-only" htmlFor="subscribe-email">邮箱地址</label><input id="subscribe-email" type="email" value={email} onChange={(event) => setEmail(event.target.value)} placeholder="your@email.com" /><button type="submit">订阅 <ArrowRight size={16} /></button>{status && <small role="status">{status}</small>}</form></section>;
 }
 
 function EmptyState({ title, copy, action }) {
@@ -176,6 +192,8 @@ function ArticlePage() {
   const related = posts.filter((item) => item.id !== post.id && (item.category === post.category || item.tags.some((tag) => post.tags.includes(tag)))).slice(0, 2);
   const currentIndex = posts.findIndex((item) => item.id === post.id);
 
+  useReadingProgress(post.slug);
+
   useEffect(() => {
     document.title = `${post.title} | 脉冲笔记`;
     return () => { document.title = '脉冲笔记 | Signal Notes'; };
@@ -187,7 +205,7 @@ function ArticlePage() {
       <div className="article-category">{post.category}</div>
       <h1>{post.title}</h1>
       <p>{post.excerpt}</p>
-      <div className="article-byline"><span className="author-avatar">{author.initials}</span><div><strong>{author.name}</strong><span>{formatDate(post.publishedAt)} · {post.readMinutes} 分钟阅读</span></div><div className="article-stats"><span>{compactNumber(post.views)} 阅读</span><span>更新于 {post.updatedAt.replaceAll('-', '.')}</span></div></div>
+      <div className="article-byline"><span className="author-avatar">{author.initials}</span><div><strong>{author.name}</strong><span>{formatDate(post.publishedAt)} · {post.readMinutes} 分钟阅读</span></div><div className="article-stats"><span>{compactNumber(post.views)} 阅读</span><span>更新于 {post.updatedAt.replaceAll('-', '.')}</span></div><SharePoster post={post} /></div>
     </header>
     <figure className="article-cover"><img src={post.cover} alt={post.coverAlt} /><figcaption>{post.coverAlt}</figcaption></figure>
     <div className="article-layout">
@@ -197,6 +215,7 @@ function ArticlePage() {
     </div>
     <footer className="article-footer">
       <div className="article-tags">{post.tags.map((tag) => <Link key={tag} to={`/blog/search?q=${encodeURIComponent(tag)}`}>#{tag}</Link>)}</div>
+      <Comments post={post} />
       <div className="article-author"><span className="author-avatar large">{author.initials}</span><div><span>WRITTEN BY</span><h2>{author.name}</h2><p>{author.bio}</p></div></div>
       {related.length > 0 && <section className="related-posts"><div className="section-title"><span>NEXT SIGNAL</span><h2>继续阅读</h2></div><div>{related.map((item) => <Link key={item.id} to={`/blog/posts/${item.slug}`}><span>{item.category} · {item.readMinutes} 分钟</span><h3>{item.title}</h3><ArrowRight /></Link>)}</div></section>}
       <nav className="article-pagination">
@@ -205,6 +224,48 @@ function ArticlePage() {
       </nav>
     </footer>
   </main>;
+}
+
+function useReadingProgress(slug) {
+  useEffect(() => {
+    const key = `signal-reading-${slug}`;
+    const saved = Number(localStorage.getItem(key) || 0);
+    let dismissed = false;
+    function restore() {
+      if (saved > 8 && saved < 92 && !dismissed) {
+        const toast = document.createElement('div');
+        toast.className = 'reading-toast';
+        toast.innerHTML = `<span>继续阅读</span><strong>${Math.round(saved)}%</strong><button type="button">继续</button><button type="button" aria-label="关闭">×</button>`;
+        toast.querySelector('button').addEventListener('click', () => { window.scrollTo({ top: (document.documentElement.scrollHeight - window.innerHeight) * saved / 100, behavior: 'smooth' }); toast.remove(); });
+        toast.querySelectorAll('button')[1].addEventListener('click', () => toast.remove());
+        document.body.appendChild(toast);
+      }
+    }
+    const timer = window.setTimeout(restore, 700);
+    function onScroll() {
+      const height = document.documentElement.scrollHeight - window.innerHeight;
+      const progress = height > 0 ? (window.scrollY / height) * 100 : 0;
+      localStorage.setItem(key, progress.toFixed(1));
+      document.documentElement.style.setProperty('--reading-progress', `${progress}%`);
+    }
+    window.addEventListener('scroll', onScroll, { passive: true });
+    onScroll();
+    return () => { window.clearTimeout(timer); window.removeEventListener('scroll', onScroll); document.documentElement.style.removeProperty('--reading-progress'); };
+  }, [slug]);
+}
+
+function Comments({ post }) {
+  const storageKey = `signal-comments-${post.slug}`;
+  const [comments, setComments] = useState(() => JSON.parse(localStorage.getItem(storageKey) || '[]'));
+  const [form, setForm] = useState({ name: '', content: '' });
+  const [status, setStatus] = useState('');
+  function submit(event) {
+    event.preventDefault();
+    if (!form.name.trim() || form.content.trim().length < 2) { setStatus('请填写昵称和至少 2 个字的评论'); return; }
+    const next = [{ id: crypto.randomUUID?.() || Date.now(), name: form.name.trim().slice(0, 30), content: form.content.trim().slice(0, 800), date: new Date().toISOString().slice(0, 10), pending: true }, ...comments];
+    setComments(next); localStorage.setItem(storageKey, JSON.stringify(next)); setForm({ name: '', content: '' }); setStatus('评论已提交，审核通过后会显示');
+  }
+  return <section className="comments" aria-labelledby="comments-title"><div className="section-title"><span>DISCUSSION</span><h2 id="comments-title">评论 <small>{comments.length}</small></h2></div><form className="comment-form" onSubmit={submit}><div><label htmlFor={`comment-name-${post.id}`}>昵称</label><input id={`comment-name-${post.id}`} value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} maxLength={30} placeholder="你的名字" /></div><div><label htmlFor={`comment-content-${post.id}`}>评论</label><textarea id={`comment-content-${post.id}`} value={form.content} onChange={(event) => setForm({ ...form, content: event.target.value })} maxLength={800} rows={4} placeholder="分享你的想法" /></div><button className="button button-primary" type="submit">提交评论 <ArrowRight size={16} /></button>{status && <small role="status">{status}</small>}</form><div className="comment-list">{comments.length ? comments.map((comment) => <article key={comment.id}><div><strong>{comment.name}</strong><span>{comment.date}{comment.pending ? ' · 待审核' : ''}</span></div><p>{comment.content}</p></article>) : <p className="comments-empty">还没有评论，欢迎留下第一条。</p>}</div></section>;
 }
 
 function AboutPage() {
