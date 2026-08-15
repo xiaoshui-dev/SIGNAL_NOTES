@@ -6,7 +6,7 @@ import BlogHeader from '../components/BlogHeader.vue'; import BlogFooter from '.
 import { categories, formatDate, posts as fallbackPosts, tags, getAuthor } from '../data'; import { loadPosts, subscribe, submitContact } from '../api';
 
 const route=useRoute();const router=useRouter();const items=ref(fallbackPosts);const apiMode=ref('本地演示数据');const draft=ref(route.query.q||'');const email=ref('');const subStatus=ref('');const contact=ref({name:'',email:'',subject:'',message:'',consent:false});const contactStatus=ref('');
-onMounted(async()=>{try{const value=await loadPosts();if(value?.length){items.value=value;apiMode.value='MySQL 实时数据';}}catch{apiMode.value='后端未连接 · 使用本地演示数据';}});
+onMounted(async()=>{try{const value=await loadPosts();if(value?.length){items.value=value;categories.forEach(cat=>{cat.count=value.filter(post=>post.category===cat.name).length;});tags.forEach(tag=>{tag.count=value.filter(post=>post.tags?.includes(tag.name)).length;});apiMode.value='MySQL 实时数据';}}catch{apiMode.value='后端未连接 · 使用本地演示数据';}});
 watch(()=>route.query.q,(value)=>draft.value=value||'');
 const section=computed(()=>route.path.split('/')[2]||'');const topic=computed(()=>route.query.topic||'');const routeSlug=computed(()=>route.params.slug||'');const routeAuthor=computed(()=>getAuthor(route.params.id));
 const filtered=computed(()=>topic.value?items.value.filter(p=>p.category===topic.value||p.tags?.includes(topic.value)):items.value);

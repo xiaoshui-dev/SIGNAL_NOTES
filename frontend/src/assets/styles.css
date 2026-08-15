@@ -656,7 +656,7 @@ body::before { content: ''; position: fixed; z-index: 100; top: 0; left: 0; widt
 .editor-grid { display: grid; grid-template-columns: minmax(0, 1fr) 310px; gap: 30px; padding-top: 36px; }
 .editor-main { min-width: 0; }
 .editor-title, .editor-excerpt, .editor-content { width: 100%; border: 0; outline: 0; background: transparent; color: var(--ink); resize: vertical; }
-.editor-title { min-height: 84px; font: 800 54px/1.15 'Noto Serif SC', serif; }
+.editor-title { min-height: 104px; overflow: hidden; font: 800 36px/1.2 'Noto Serif SC', serif; }
 .editor-excerpt { margin-top: 18px; padding: 16px 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); color: var(--ink-soft); font-size: 16px; line-height: 1.8; }
 .editor-content { min-height: 620px; padding-top: 26px; font: 400 15px/1.85 'IBM Plex Mono', monospace; }
 .editor-sidebar { display: grid; align-content: start; gap: 16px; }
@@ -767,7 +767,7 @@ body::before { content: ''; position: fixed; z-index: 100; top: 0; left: 0; widt
   .media-grid { grid-template-columns: repeat(2, 1fr); }
   .editor-top { align-items: flex-start; flex-direction: column; gap: 14px; padding: 14px 0; }
   .editor-top > div { flex-wrap: wrap; }
-  .editor-title { min-height: 70px; font-size: 37px; }
+  .editor-title { min-height: 116px; font-size: 34px; }
   .editor-sidebar { grid-template-columns: 1fr; }
   .log-status-grid { grid-template-columns: 1fr; }
   .audit-list { overflow-x: auto; }

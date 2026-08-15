@@ -8,8 +8,8 @@ export default defineConfig({
     host: '127.0.0.1',
     port: 5173,
     proxy: {
-      '/api': 'http://127.0.0.1:8080',
-      '/uploads': 'http://127.0.0.1:8080',
+      '/api': process.env.VITE_PROXY_TARGET || 'http://127.0.0.1:8081',
+      '/uploads': process.env.VITE_PROXY_TARGET || 'http://127.0.0.1:8081',
     },
   },
 });
