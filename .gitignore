@@ -4,6 +4,7 @@ dist/
 coverage/
 backend/target/
 backend/uploads/
+backend/backups/
 .idea/
 .vscode/
 *.log

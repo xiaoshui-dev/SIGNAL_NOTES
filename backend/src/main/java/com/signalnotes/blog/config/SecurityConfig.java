@@ -30,7 +30,7 @@ public class SecurityConfig {
     }
 
     @Bean
-    UserDetailsService users(@Value("${app.admin.username}") String username, @Value("${app.admin.password}") String password, PasswordEncoder encoder) {
+    InMemoryUserDetailsManager users(@Value("${app.admin.username}") String username, @Value("${app.admin.password}") String password, PasswordEncoder encoder) {
         UserDetails admin = User.withUsername(username).password(encoder.encode(password)).roles("ADMIN").build();
         return new InMemoryUserDetailsManager(admin);
     }

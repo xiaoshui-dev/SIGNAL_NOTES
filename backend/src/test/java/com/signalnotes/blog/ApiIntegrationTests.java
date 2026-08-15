@@ -9,6 +9,9 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.mock.web.MockMultipartFile;
+import org.springframework.security.core.userdetails.User;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.provisioning.InMemoryUserDetailsManager;
 import java.time.LocalDate;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
@@ -19,6 +22,8 @@ class ApiIntegrationTests {
     @Autowired PostRepository posts;
     @Autowired CategoryRepository categories;
     @Autowired CommentRepository comments;
+    @Autowired InMemoryUserDetailsManager userDetails;
+    @Autowired PasswordEncoder passwordEncoder;
 
     @BeforeEach void seed() {
         comments.deleteAll(); posts.deleteAll(); categories.deleteAll();
@@ -43,6 +48,20 @@ class ApiIntegrationTests {
         Long id = com.fasterxml.jackson.databind.json.JsonMapper.builder().build().readTree(response).get("id").longValue();
         mvc.perform(patch("/api/admin/media/{id}", id).with(auth).contentType(MediaType.APPLICATION_JSON).content("{\"filename\":\"updated.png\",\"altText\":\"更新后的替代文本\"}"))
             .andExpect(status().isOk()).andExpect(jsonPath("$.filename").value("updated.png"));
+    }
+
+    @Test void adminCanChangePasswordAndOldPasswordStopsWorking() throws Exception {
+        var oldAuth=org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.httpBasic("admin","signal2026");
+        var newAuth=org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.httpBasic("admin","signal2026-new");
+        try {
+            mvc.perform(put("/api/admin/account/password").with(oldAuth).contentType(MediaType.APPLICATION_JSON).content("{\"currentPassword\":\"signal2026\",\"newPassword\":\"signal2026-new\"}"))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.status").value("UPDATED"));
+            mvc.perform(get("/api/admin/dashboard").with(oldAuth)).andExpect(status().isUnauthorized());
+            mvc.perform(get("/api/admin/dashboard").with(newAuth)).andExpect(status().isOk());
+        } finally {
+            var current=userDetails.loadUserByUsername("admin");
+            userDetails.updateUser(User.withUserDetails(current).password(passwordEncoder.encode("signal2026")).build());
+        }
     }
 
     @Test void publicPostApiReturnsPublishedContent() throws Exception {
