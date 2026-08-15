@@ -1,0 +1,50 @@
+services:
+  mysql:
+    image: mysql:8.4
+    container_name: signal-notes-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: ${DB_NAME:-signal_notes}
+      MYSQL_USER: ${DB_USERNAME:-signal_notes}
+      MYSQL_PASSWORD: ${DB_PASSWORD:-signal_notes_dev}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-root_dev_only}
+    ports:
+      - "${MYSQL_PORT:-3306}:3306"
+    volumes:
+      - signal-notes-mysql:/var/lib/mysql
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h localhost -u$${MYSQL_USER} -p$${MYSQL_PASSWORD} --silent"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  backend:
+    build: ./backend
+    environment:
+      DB_HOST: mysql
+      DB_PORT: 3306
+      DB_NAME: ${DB_NAME:-signal_notes}
+      DB_USERNAME: ${DB_USERNAME:-signal_notes}
+      DB_PASSWORD: ${DB_PASSWORD:-signal_notes_dev}
+      ADMIN_USERNAME: ${ADMIN_USERNAME:-admin}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-signal2026}
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:4173,http://127.0.0.1:4173}
+      UPLOAD_DIR: /app/uploads
+    ports:
+      - "${BACKEND_PORT:-8080}:8080"
+    volumes:
+      - signal-notes-uploads:/app/uploads
+    depends_on:
+      mysql:
+        condition: service_healthy
+
+  frontend:
+    build: ./frontend
+    ports:
+      - "${FRONTEND_PORT:-4173}:80"
+    depends_on:
+      - backend
+
+volumes:
+  signal-notes-mysql:
+  signal-notes-uploads:

@@ -15,8 +15,8 @@ import java.util.*;
 @Configuration
 public class SecurityConfig {
     @Bean
-    SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
-        return http.csrf(csrf -> csrf.disable()).cors(Customizer.withDefaults())
+    SecurityFilterChain filterChain(HttpSecurity http, CorsConfigurationSource corsConfigurationSource) throws Exception {
+        return http.csrf(csrf -> csrf.disable()).cors(cors -> cors.configurationSource(corsConfigurationSource))
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers("/api/admin/**").authenticated()
                 .requestMatchers("/actuator/health", "/api/**", "/uploads/**").permitAll()
@@ -33,7 +33,7 @@ public class SecurityConfig {
     @Bean PasswordEncoder passwordEncoder() { return PasswordEncoderFactories.createDelegatingPasswordEncoder(); }
 
     @Bean
-    CorsConfigurationSource cors(@Value("${app.cors-origins}") String origins) {
+    CorsConfigurationSource corsConfigurationSource(@Value("${app.cors-origins}") String origins) {
         CorsConfiguration config = new CorsConfiguration();
         config.setAllowedOrigins(Arrays.stream(origins.split(",")).map(String::trim).toList());
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
