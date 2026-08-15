@@ -24,5 +24,11 @@ public class Post {
     @Column(name = "updated_at", nullable = false) private LocalDate updatedAt = LocalDate.now();
     @Column(name = "read_minutes", nullable = false) private Integer readMinutes = 5;
     @Column(nullable = false) private Long views = 0L;
+    @Column(name = "scheduled_at") private Instant scheduledAt;
+    @Column(name = "deleted_at") private Instant deletedAt;
+    @Column(name = "seo_title", length = 240) private String seoTitle;
+    @Column(name = "seo_description", length = 320) private String seoDescription;
+    @Column(name = "canonical_url", length = 500) private String canonicalUrl;
+    @Column(name = "is_pinned", nullable = false) private boolean pinned = false;
     @Column(name = "created_at", nullable = false, updatable = false) private Instant createdAt = Instant.now();
 }

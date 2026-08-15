@@ -24,3 +24,4 @@ export async function loadPosts(params = {}) {
 
 export async function submitComment(payload) { return apiRequest('/comments', { method: 'POST', body: JSON.stringify(payload) }); }
 export async function subscribe(email) { return apiRequest('/subscriptions', { method: 'POST', body: JSON.stringify({ email }) }); }
+export async function submitContact(payload) { return apiRequest('/contact', { method: 'POST', headers: payload.idempotencyKey ? { 'Idempotency-Key': payload.idempotencyKey } : {}, body: JSON.stringify(payload) }); }

@@ -40,4 +40,13 @@ class ApiIntegrationTests {
         mvc.perform(get("/api/admin/dashboard").with(org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.httpBasic("admin", "signal2026")))
             .andExpect(status().isOk()).andExpect(jsonPath("$.status").value("UP"));
     }
+
+    @Test void contactFormReturnsTicketAndRejectsOversizedMessage() throws Exception {
+        mvc.perform(post("/api/contact").contentType(MediaType.APPLICATION_JSON)
+                .content("{\"name\":\"读者\",\"email\":\"reader@example.com\",\"subject\":\"文章反馈\",\"message\":\"这是一条足够具体的反馈\",\"consent\":true}"))
+            .andExpect(status().isCreated()).andExpect(jsonPath("$.ticket").isString()).andExpect(jsonPath("$.status").value("RECEIVED"));
+        mvc.perform(post("/api/contact").contentType(MediaType.APPLICATION_JSON)
+                .content("{\"name\":\"读者\",\"email\":\"reader@example.com\",\"subject\":\"文章反馈\",\"message\":\"" + "x".repeat(2001) + "\",\"consent\":true}"))
+            .andExpect(status().isBadRequest());
+    }
 }

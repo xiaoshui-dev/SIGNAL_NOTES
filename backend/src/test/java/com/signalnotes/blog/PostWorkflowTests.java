@@ -1,0 +1,55 @@
+package com.signalnotes.blog;
+
+import com.signalnotes.blog.domain.Post;
+import com.signalnotes.blog.domain.PostStatus;
+import com.signalnotes.blog.repository.PostRepository;
+import com.signalnotes.blog.repository.PostRevisionRepository;
+import com.signalnotes.blog.service.PostService;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
+
+import java.util.Set;
+
+import static org.junit.jupiter.api.Assertions.*;
+
+@SpringBootTest
+class PostWorkflowTests {
+    @Autowired PostService service;
+    @Autowired PostRepository posts;
+    @Autowired PostRevisionRepository revisions;
+
+    @BeforeEach
+    void clean() {
+        revisions.deleteAll();
+        posts.deleteAll();
+    }
+
+    @Test
+    void savingAnArticleCreatesAnAuditableRevision() {
+        var saved = service.save(null, new PostService.PostInput(
+            "revision-test", "可追溯文章", "摘要", "正文", null, "", "系统设计",
+            Set.of("工程"), PostStatus.DRAFT, "林默", null, 5,
+            null, null, null, null, false
+        ));
+
+        assertEquals(1, revisions.countByPostId(saved.id()));
+        assertEquals(1, revisions.findByPostIdOrderByVersionNoDesc(saved.id()).get(0).getVersionNo());
+    }
+
+    @Test
+    void deletingAnArticleMovesItToRecycleBin() {
+        var saved = service.save(null, new PostService.PostInput(
+            "trash-test", "回收站文章", "摘要", "正文", null, "", "系统设计",
+            Set.of(), PostStatus.DRAFT, "林默", null, 5,
+            null, null, null, null, false
+        ));
+
+        service.delete(saved.id());
+
+        Post deleted = posts.findById(saved.id()).orElseThrow();
+        assertEquals(PostStatus.TRASHED, deleted.getStatus());
+        assertNotNull(deleted.getDeletedAt());
+    }
+}
