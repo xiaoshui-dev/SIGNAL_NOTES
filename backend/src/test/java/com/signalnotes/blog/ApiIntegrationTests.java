@@ -8,6 +8,7 @@ import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMock
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.mock.web.MockMultipartFile;
 import java.time.LocalDate;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
@@ -17,11 +18,31 @@ class ApiIntegrationTests {
     @Autowired MockMvc mvc;
     @Autowired PostRepository posts;
     @Autowired CategoryRepository categories;
+    @Autowired CommentRepository comments;
 
     @BeforeEach void seed() {
-        posts.deleteAll(); categories.deleteAll();
+        comments.deleteAll(); posts.deleteAll(); categories.deleteAll();
         Category category = new Category(); category.setName("系统设计"); category.setSlug("system-design"); category.setDescription("测试分类"); category = categories.save(category);
         Post post = new Post(); post.setSlug("test-post"); post.setTitle("测试文章"); post.setExcerpt("测试摘要"); post.setContent("## 正文"); post.setCategory(category); post.setStatus(PostStatus.PUBLISHED); post.setPublishedAt(LocalDate.now()); posts.save(post);
+    }
+
+    @Test void commentsSupportRepliesReportsAndSpamScreening() throws Exception {
+        var approved = new Comment(); approved.setPostSlug("test-post"); approved.setAuthorName("读者"); approved.setContent("一条已通过的评论"); approved.setStatus(CommentStatus.APPROVED); approved = comments.save(approved);
+        mvc.perform(post("/api/comments").contentType(MediaType.APPLICATION_JSON).content("{\"postSlug\":\"test-post\",\"parentId\":"+approved.getId()+",\"authorName\":\"回复者\",\"content\":\"感谢你的补充\"}"))
+            .andExpect(status().isCreated()).andExpect(jsonPath("$.parentId").value(approved.getId()));
+        mvc.perform(post("/api/comments/{id}/report", approved.getId()).contentType(MediaType.APPLICATION_JSON).content("{\"reason\":\"广告\"}"))
+            .andExpect(status().isOk()).andExpect(jsonPath("$.status").value("RECEIVED"));
+        mvc.perform(post("/api/comments").contentType(MediaType.APPLICATION_JSON).content("{\"postSlug\":\"test-post\",\"authorName\":\"机器人\",\"content\":\"https://a.test https://b.test https://c.test 重复内容\"}"))
+            .andExpect(status().isCreated()).andExpect(jsonPath("$.status").value("SPAM"));
+    }
+
+    @Test void mediaMetadataCanBeUpdatedAndReferencedAssetsCannotBeDeleted() throws Exception {
+        var auth = org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.httpBasic("admin", "signal2026");
+        MockMultipartFile file = new MockMultipartFile("file", "cover.png", "image/png", new byte[]{1,2,3});
+        String response = mvc.perform(multipart("/api/admin/media").file(file).param("altText", "原始替代文本").with(auth)).andExpect(status().isCreated()).andReturn().getResponse().getContentAsString();
+        Long id = com.fasterxml.jackson.databind.json.JsonMapper.builder().build().readTree(response).get("id").longValue();
+        mvc.perform(patch("/api/admin/media/{id}", id).with(auth).contentType(MediaType.APPLICATION_JSON).content("{\"filename\":\"updated.png\",\"altText\":\"更新后的替代文本\"}"))
+            .andExpect(status().isOk()).andExpect(jsonPath("$.filename").value("updated.png"));
     }
 
     @Test void publicPostApiReturnsPublishedContent() throws Exception {
