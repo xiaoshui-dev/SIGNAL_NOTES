@@ -2,6 +2,10 @@ node_modules/
 dist/
 .vite/
 coverage/
+backend/target/
+backend/uploads/
+.idea/
+.vscode/
 *.log
 .DS_Store
 Thumbs.db

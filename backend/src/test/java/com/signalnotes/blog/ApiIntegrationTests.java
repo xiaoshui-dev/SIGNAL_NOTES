@@ -1,0 +1,43 @@
+package com.signalnotes.blog;
+
+import com.signalnotes.blog.domain.*;
+import com.signalnotes.blog.repository.*;
+import org.junit.jupiter.api.*;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.http.MediaType;
+import org.springframework.test.web.servlet.MockMvc;
+import java.time.LocalDate;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+
+@SpringBootTest @AutoConfigureMockMvc
+class ApiIntegrationTests {
+    @Autowired MockMvc mvc;
+    @Autowired PostRepository posts;
+    @Autowired CategoryRepository categories;
+
+    @BeforeEach void seed() {
+        posts.deleteAll(); categories.deleteAll();
+        Category category = new Category(); category.setName("系统设计"); category.setSlug("system-design"); category.setDescription("测试分类"); category = categories.save(category);
+        Post post = new Post(); post.setSlug("test-post"); post.setTitle("测试文章"); post.setExcerpt("测试摘要"); post.setContent("## 正文"); post.setCategory(category); post.setStatus(PostStatus.PUBLISHED); post.setPublishedAt(LocalDate.now()); posts.save(post);
+    }
+
+    @Test void publicPostApiReturnsPublishedContent() throws Exception {
+        mvc.perform(get("/api/posts")).andExpect(status().isOk()).andExpect(jsonPath("$[0].slug").value("test-post"));
+        mvc.perform(get("/api/posts/test-post")).andExpect(status().isOk()).andExpect(jsonPath("$.title").value("测试文章"));
+    }
+
+    @Test void commentsAreCreatedPendingAndHiddenFromPublicList() throws Exception {
+        mvc.perform(post("/api/comments").contentType(MediaType.APPLICATION_JSON).content("{\"postSlug\":\"test-post\",\"authorName\":\"读者\",\"content\":\"有帮助的文章\"}"))
+            .andExpect(status().isCreated()).andExpect(jsonPath("$.status").value("PENDING"));
+        mvc.perform(get("/api/comments").param("postSlug", "test-post")).andExpect(status().isOk()).andExpect(content().json("[]"));
+    }
+
+    @Test void adminEndpointsRequireAuthentication() throws Exception {
+        mvc.perform(get("/api/admin/dashboard")).andExpect(status().isUnauthorized());
+        mvc.perform(get("/api/admin/dashboard").with(org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.httpBasic("admin", "signal2026")))
+            .andExpect(status().isOk()).andExpect(jsonPath("$.status").value("UP"));
+    }
+}
