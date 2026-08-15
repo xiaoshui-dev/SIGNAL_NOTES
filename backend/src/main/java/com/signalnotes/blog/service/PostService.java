@@ -44,6 +44,17 @@ public class PostService {
     }
 
     @Transactional public void delete(Long id) { Post post = posts.findById(id).orElseThrow(() -> new EntityNotFoundException("文章不存在")); post.setStatus(PostStatus.TRASHED); post.setDeletedAt(java.time.Instant.now()); post.setUpdatedAt(LocalDate.now()); posts.save(post); }
+
+    @Transactional(readOnly = true)
+    public List<PostRevision> revisions(Long id) { if (!posts.existsById(id)) throw new EntityNotFoundException("文章不存在"); return revisions.findByPostIdOrderByVersionNoDesc(id); }
+
+    @Transactional
+    public PostView restoreRevision(Long id, Long revisionId) {
+        Post post = posts.findById(id).orElseThrow(() -> new EntityNotFoundException("文章不存在"));
+        PostRevision revision = revisions.findById(revisionId).filter(item -> item.getPost().getId().equals(id)).orElseThrow(() -> new EntityNotFoundException("版本不存在"));
+        post.setTitle(revision.getTitle()); post.setExcerpt(revision.getExcerpt()); post.setContent(revision.getContent()); post.setStatus(PostStatus.DRAFT); post.setUpdatedAt(LocalDate.now());
+        Post saved = posts.save(post); PostRevision restored = new PostRevision(); restored.setPost(saved); restored.setVersionNo(revisions.findTopByPostIdOrderByVersionNoDesc(id).map(item -> item.getVersionNo() + 1).orElse(1)); restored.setTitle(saved.getTitle()); restored.setExcerpt(saved.getExcerpt()); restored.setContent(saved.getContent()); restored.setStatus(saved.getStatus()); restored.setEditor("restore"); restored.setChangeSummary("从版本 #" + revision.getVersionNo() + " 恢复"); revisions.save(restored); return PostView.from(saved);
+    }
     private String blankToNull(String value) { return value == null || value.isBlank() ? null : value.trim(); }
     private String slugify(String value) { return "category-" + Integer.toUnsignedString(value.hashCode(), 36); }
 

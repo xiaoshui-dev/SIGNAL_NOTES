@@ -49,4 +49,11 @@ class ApiIntegrationTests {
                 .content("{\"name\":\"读者\",\"email\":\"reader@example.com\",\"subject\":\"文章反馈\",\"message\":\"" + "x".repeat(2001) + "\",\"consent\":true}"))
             .andExpect(status().isBadRequest());
     }
+
+    @Test void adminCanListTaxonomyAndPostRevisions() throws Exception {
+        var auth = org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.httpBasic("admin", "signal2026");
+        mvc.perform(get("/api/admin/categories").with(auth)).andExpect(status().isOk());
+        Long postId = posts.findBySlug("test-post").orElseThrow().getId();
+        mvc.perform(get("/api/admin/posts/{id}/revisions", postId).with(auth)).andExpect(status().isOk());
+    }
 }
