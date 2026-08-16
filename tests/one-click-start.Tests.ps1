@@ -108,6 +108,14 @@ Describe 'Signal Notes launcher files' {
     It 'does not require pnpm in the startup path' {
         (Get-Content -Raw (Join-Path $projectRoot 'start-blog.ps1')) | Should Not Match 'pnpm'
         (Get-Content -Raw (Join-Path $projectRoot 'scripts/blog-dev-common.ps1')) | Should Not Match 'pnpm'
+        (Get-Content -Raw (Join-Path $projectRoot 'start-blog.cmd')) | Should Not Match 'pnpm'
+    }
+
+    It 'uses and identifies the launcher directory from the CMD wrapper' {
+        $wrapper = Get-Content -Raw (Join-Path $projectRoot 'start-blog.cmd')
+        $wrapper | Should Match '%~dp0start-blog\.ps1'
+        $wrapper | Should Match 'cd /d "%~dp0"'
+        $wrapper | Should Match 'Launcher script: %~dp0start-blog\.ps1'
     }
 
     It 'does not require pnpm in the container frontend build' {
