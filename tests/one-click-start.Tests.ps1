@@ -293,6 +293,16 @@ Describe 'Signal Notes public reading experience guards' {
         $article | Should Match 'removeArticleInteractionListeners'
     }
 
+    It 'distinguishes article loading, connection failure, and not-found states' {
+        $article = Get-Content -Raw (Join-Path $projectRoot 'frontend/src/views/ArticleView.vue')
+        $article | Should Match 'const articleStatus = ref\(.loading.\)'
+        $article | Should Match 'articleStatus\.value = error\.status === 404 \? .not-found. : .error.'
+        $article | Should Match 'v-if="articleStatus === .loading."'
+        $article | Should Match 'v-else-if="articleStatus === .error."'
+        $article | Should Match '@click="retryArticle"'
+        $article | Should Match 'v-else-if="articleStatus === .not-found."'
+    }
+
     It 'keeps public taxonomy/search/archive states actionable on connection failure' {
         $blog = Get-Content -Raw (Join-Path $projectRoot 'frontend/src/views/BlogView.vue')
         $landing = Get-Content -Raw (Join-Path $projectRoot 'frontend/src/views/LandingView.vue')

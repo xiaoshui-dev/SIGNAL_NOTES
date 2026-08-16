@@ -15,6 +15,8 @@ import { useSite } from '../site';
 const route = useRoute();
 const { site, loadSite } = useSite();
 const post = ref(null);
+const articleStatus = ref('loading');
+const articleError = ref('');
 const comment = ref({ name: '', content: '' });
 const comments = ref([]);
 const commentStatus = ref('');
@@ -46,6 +48,8 @@ let removeArticleInteractionListeners = () => {};
 
 async function loadArticle(slug) {
   const generation = ++loadGeneration;
+  articleStatus.value = 'loading';
+  articleError.value = '';
   post.value = null;
   allPosts.value = [];
   comments.value = [];
@@ -59,19 +63,24 @@ async function loadArticle(slug) {
   document.documentElement.style.removeProperty('--reading-progress');
   removeArticleInteractionListeners();
   await loadSite().catch(() => {});
-  try {
-    const [value, list] = await Promise.all([
-      apiRequest(`/posts/${encodeURIComponent(slug)}`),
-      apiRequest('/posts'),
-    ]);
-    if (generation !== loadGeneration || route.params.slug !== slug) return;
-    post.value = value || null;
-    allPosts.value = Array.isArray(list) ? list : [];
-  } catch (error) {
-    if (generation === loadGeneration) commentStatus.value = error.message || '文章服务暂时不可用';
+  const [postResult, listResult] = await Promise.allSettled([
+    apiRequest(`/posts/${encodeURIComponent(slug)}`),
+    apiRequest('/posts'),
+  ]);
+  if (generation !== loadGeneration || route.params.slug !== slug) return;
+  if (postResult.status === 'rejected') {
+    const error = postResult.reason || {};
+    articleStatus.value = error.status === 404 ? 'not-found' : 'error';
+    articleError.value = error.message || site.noConnectionDescription;
     return;
   }
-  if (generation !== loadGeneration || !post.value) return;
+  post.value = postResult.value || null;
+  allPosts.value = listResult.status === 'fulfilled' && Array.isArray(listResult.value) ? listResult.value : [];
+  if (!post.value) {
+    articleStatus.value = 'not-found';
+    return;
+  }
+  articleStatus.value = 'ready';
   setPageSeo({ title: `${post.value.title} | ${site.siteName}`, description: post.value.excerpt, canonical: new URL(`/blog/posts/${post.value.slug}`, window.location.origin).href, type: 'article' });
   setArticleJsonLd(post.value);
   continueFrom.value = Number(localStorage.getItem(`signal-reading-${post.value.slug}`) || 0);
@@ -91,6 +100,10 @@ async function loadArticle(slug) {
 watch(() => route.params.slug, (slug) => {
   if (slug) loadArticle(String(slug));
 }, { immediate: true });
+
+function retryArticle() {
+  if (route.params.slug) loadArticle(String(route.params.slug));
+}
 
 onMounted(() => window.addEventListener('scroll', progress, { passive: true }));
 
@@ -142,7 +155,10 @@ async function reportComment(item){if(item.reported){commentStatus.value=site.co
 
 <template>
   <div class="blog-shell"><BlogHeader />
-    <main v-if="post" class="article-page">
+    <main v-if="articleStatus === 'loading'" class="blog-main"><div class="empty-state" role="status" aria-live="polite"><span>{{ site.landingLoadingLabel }}</span><h2>{{ site.landingLoadingLabel }}</h2><p>{{ site.noPublicPostsDescription }}</p></div></main>
+    <main v-else-if="articleStatus === 'error'" class="blog-main"><div class="empty-state" role="alert"><span>{{ site.noConnectionLabel }}</span><h2>{{ site.noConnectionTitle }}</h2><p>{{ articleError || site.noConnectionDescription }}</p><button class="button" type="button" @click="retryArticle">{{ site.reconnectLabel }}</button></div></main>
+    <main v-else-if="articleStatus === 'not-found'" class="blog-main"><div class="not-found"><span>{{ site.status404Label }}</span><h1>{{ site.articleNotFoundTitle }}</h1><RouterLink class="button button-primary" to="/blog">{{ site.articleNotFoundBackLabel }}</RouterLink></div></main>
+    <main v-else-if="post" class="article-page">
       <div class="article-breadcrumb"><RouterLink to="/blog">文章</RouterLink><ChevronRight :size="13" /><span>{{ post.category }}</span><button class="article-copy-link" type="button" @click="copyLink"><Copy :size="14" />{{ site.articleCopyLinkLabel }}</button></div>
       <div v-if="continueFrom > 8 && continueFrom < 96" class="continue-reading"><span>上次读到 {{ continueFrom }}%</span><button type="button" @click="scrollToContinue">继续阅读 <ArrowRight :size="14" /></button></div>
       <header class="article-header"><div class="article-category">{{ post.category }}</div><h1>{{ post.title }}</h1><p>{{ post.excerpt }}</p><div class="article-byline"><span class="author-avatar">{{ author.initials }}</span><div><strong>{{ author.name }}</strong><span>{{ formatDate(post.publishedAt) }} · {{ post.readMinutes }} 分钟阅读</span></div><div class="article-stats"><span>{{ post.views }} 阅读</span><span>更新于 {{ post.updatedAt }}</span></div><SharePoster :post="post" /></div></header>
@@ -150,7 +166,6 @@ async function reportComment(item){if(item.reported){commentStatus.value=site.co
       <div class="article-layout"><aside class="article-toc"><span>本页目录</span><nav><a v-for="(heading,index) in article.headings" :key="heading.id" :href="`#${heading.id}`"><small>0{{ index + 1 }}</small>{{ heading.title }}</a></nav></aside><article ref="contentRef" class="article-content" v-html="article.html" /><aside class="article-side"><div><Clock3 :size="16" /><span>{{ post.readMinutes }} 分钟</span></div><div><CalendarDays :size="16" /><span>{{ post.updatedAt }}</span></div><div><FolderOpen :size="16" /><span>{{ post.category }}</span></div><div><Hash :size="16" /><span>{{ post.tags?.length || 0 }} 个标签</span></div></aside></div>
       <footer class="article-footer"><div class="article-tags"><RouterLink v-for="tag in post.tags" :key="tag" :to="`/blog/tags/${encodeURIComponent(tag)}`">#{{ tag }}</RouterLink></div><section v-if="related.length" class="related-articles"><div class="section-title"><span>KEEP READING</span><h2>{{ site.articleRelatedTitle }}</h2></div><div><RouterLink v-for="item in related" :key="item.slug" :to="`/blog/posts/${item.slug}`"><span>{{ item.category }}</span><strong>{{ item.title }}</strong><ArrowRight :size="16" /></RouterLink></div></section><div class="article-pagination"><RouterLink v-if="previous" :to="`/blog/posts/${previous.slug}`"><ArrowLeft :size="16" /><span><small>{{ site.articlePreviousLabel }}</small>{{ previous.title }}</span></RouterLink><span v-else /><RouterLink v-if="next" :to="`/blog/posts/${next.slug}`"><span><small>{{ site.articleNextLabel }}</small>{{ next.title }}</span><ArrowRight :size="16" /></RouterLink></div><section class="comments"><div class="section-title"><span>{{ site.commentsSectionLabel }}</span><h2>{{ site.commentsTitle }} <small>{{ comments.length }}</small></h2></div><form class="comment-form" @submit.prevent="addComment"><div><label>{{ site.commentsNameLabel }}</label><input v-model="comment.name" maxlength="80" :placeholder="site.commentsNamePlaceholder" /></div><div><label>{{replyTo ? `${site.commentsReplyActionLabel} ${replyTo.authorName}` : site.commentsBodyLabel}}</label><textarea v-model="comment.content" maxlength="2000" rows="4" :placeholder="replyTo ? site.commentsReplyPlaceholder : site.commentsPlaceholder" /></div><button class="button button-primary">{{replyTo ? site.commentsReplySubmitLabel : site.commentsSubmitLabel}} <ArrowRight :size="16" /></button><button v-if="replyTo" type="button" class="comment-cancel" @click="replyTo=null">{{ site.commentsCancelReplyLabel }}</button><small v-if="commentStatus" role="status">{{ commentStatus }}</small></form><div class="comment-list"><article v-for="item in comments" :key="item.id" :class="{reply:item.parentId}"><div><strong>{{ item.authorName || item.name }}</strong><span>{{ (item.createdAt || item.date || '').slice(0, 10) }}{{item.parentId ? ` · ${site.commentsReplySuffix}` : ''}}</span></div><p>{{ item.content }}</p><footer><button type="button" @click="startReply(item)">{{ site.commentsReplyActionLabel }}</button><button type="button" :disabled="item.reported" @click="reportComment(item)">{{item.reported ? site.commentsReportedLabel : site.commentsReportActionLabel}}</button></footer></article><p v-if="!comments.length" class="comments-empty">{{ site.commentsEmptyLabel }}</p></div></section><div class="article-author"><span class="author-avatar large">{{ author.initials }}</span><div><span>WRITTEN BY</span><h2>{{ author.name }}</h2><p>{{ author.bio }}</p><RouterLink class="read-link" :to="`/blog/authors/${author.id}`">查看作者全部文章 <ArrowRight :size="15" /></RouterLink></div></div></footer>
     </main>
-    <main v-else class="blog-main"><div class="not-found"><span>{{ site.status404Label }}</span><h1>{{ site.articleNotFoundTitle }}</h1><RouterLink class="button button-primary" to="/blog">{{ site.articleNotFoundBackLabel }}</RouterLink></div></main>
     <div v-if="lightbox.open" class="image-lightbox" role="dialog" aria-modal="true" @click.self="lightbox.open = false"><button class="icon-button" type="button" aria-label="关闭图片预览" @click="lightbox.open = false"><X :size="20" /></button><img :src="lightbox.src" :alt="lightbox.alt" /></div>
     <BlogFooter />
   </div>
