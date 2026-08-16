@@ -15,7 +15,7 @@ function search() { if (query.value.trim()) router.push({ path: '/blog/search', 
   <header class="blog-header">
     <BrandLogo to="/blog" />
     <nav class="blog-nav" :class="{ 'is-open': open }" aria-label="博客导航">
-      <RouterLink to="/blog">文章</RouterLink><RouterLink to="/blog/categories">分类</RouterLink><RouterLink to="/blog/archives">归档</RouterLink><RouterLink to="/blog/about">关于</RouterLink>
+      <RouterLink to="/blog">文章</RouterLink><RouterLink to="/blog/categories">分类</RouterLink><RouterLink to="/blog/tags">标签</RouterLink><RouterLink to="/blog/archives">归档</RouterLink><RouterLink to="/blog/about">关于</RouterLink>
     </nav>
     <form class="header-search" role="search" @submit.prevent="search"><Search :size="16" /><input v-model="query" type="search" aria-label="搜索文章" placeholder="搜索" /></form>
     <div class="blog-header-actions">

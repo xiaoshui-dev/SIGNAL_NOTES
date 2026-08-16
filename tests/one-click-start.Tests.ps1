@@ -130,6 +130,18 @@ Describe 'Signal Notes launcher files' {
         $adminView | Should Match ':disabled="saving'
     }
 
+    It 'exposes live categories and a public tag index' {
+        $landingView = Get-Content -Raw (Join-Path $projectRoot 'frontend/src/views/LandingView.vue')
+        $blogHeader = Get-Content -Raw (Join-Path $projectRoot 'frontend/src/components/BlogHeader.vue')
+        $blogView = Get-Content -Raw (Join-Path $projectRoot 'frontend/src/views/BlogView.vue')
+        $landingView | Should Match 'categories\.value\.map'
+        $landingView | Should Not Match 'configured\.length\) return configured'
+        $landingView | Should Match ':key="topic\.name"'
+        $landingView | Should Not Match 'saved\.number'
+        $blogHeader | Should Match 'to="/blog/tags"'
+        $blogView | Should Match 'TAG INDEX / 008'
+    }
+
     It 'records the actual service listener processes after startup' {
         $startScript = Get-Content -Raw (Join-Path $projectRoot 'start-blog.ps1')
         $startScript | Should Match 'Write-BlogListenerProcessRecord -Path \$backendPidPath'
