@@ -1,0 +1,22 @@
+[Unit]
+Description=Signal Notes Blog Backend
+After=network-online.target mysql.service mysqld.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=www
+Group=www
+WorkingDirectory=/www/wwwroot/signal-notes/backend
+EnvironmentFile=/www/server/signal-notes/signal-notes.env
+ExecStart=/usr/bin/java -Xms256m -Xmx768m -Dfile.encoding=UTF-8 -Duser.timezone=Asia/Shanghai -jar /www/wwwroot/signal-notes/backend/signal-notes-blog.jar
+Restart=on-failure
+RestartSec=5
+SuccessExitStatus=143
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+ReadWritePaths=/www/wwwroot/signal-notes/uploads /www/backup/signal-notes
+
+[Install]
+WantedBy=multi-user.target
