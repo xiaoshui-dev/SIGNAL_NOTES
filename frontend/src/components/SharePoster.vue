@@ -3,12 +3,13 @@ import QRCode from 'qrcode';
 import { Check, Clipboard, Download, Image as ImageIcon, Share2, X } from 'lucide-vue-next';
 import { computed, nextTick, ref, watch } from 'vue';
 import { useSite } from '../site';
+import { resolveShareUrl } from '../shareUrl';
 
 const props = defineProps({ post: { type: Object, required: true } });
 const { site } = useSite();
 const open = ref(false); const variant = ref(site.shareTemplate === 'portrait' ? 'portrait' : 'landscape'); const qr = ref(''); const posterUrl = ref(''); const status = ref(''); const statusTone = ref('success');
 let generation = 0;
-const url = computed(() => `${window.location.origin}/blog/posts/${props.post.slug}`);
+const url = computed(() => resolveShareUrl(props.post, window.location.origin));
 
 function wrap(ctx, text, maxWidth, maxLines) { const lines=[]; let line=''; for (const char of [...text]) { if (ctx.measureText(line+char).width>maxWidth && line) { lines.push(line); line=char; if (lines.length===maxLines-1) break; } else line+=char; } if (line) lines.push(line); if (lines.length===maxLines && lines.join('').length<text.length) lines[maxLines-1]=`${lines[maxLines-1].slice(0,-1)}…`; return lines; }
 async function generate() {
@@ -25,7 +26,7 @@ async function generate() {
   if (currentGeneration === generation && open.value) posterUrl.value=canvas.toDataURL('image/png');
 }
 watch(() => site.shareTemplate, (value) => { variant.value = value === 'portrait' ? 'portrait' : 'landscape'; });
-watch([open, variant, () => site.siteName, () => site.siteShortName, () => site.siteTagline, () => site.sharePosterTitle, () => site.shareScanLabel, () => site.shareQrDescription, () => props.post.slug, () => props.post.title, () => props.post.excerpt, () => props.post.cover], async()=>{if(open.value){await nextTick();generate();}});
+watch([open, variant, () => site.siteName, () => site.siteShortName, () => site.siteTagline, () => site.sharePosterTitle, () => site.shareScanLabel, () => site.shareQrDescription, () => props.post.slug, () => props.post.canonicalUrl, () => props.post.title, () => props.post.excerpt, () => props.post.cover], async()=>{if(open.value){await nextTick();generate();}});
 async function copy(){try { await navigator.clipboard?.writeText(`${props.post.title}\n${props.post.excerpt}\n${url.value}`); statusTone.value='success'; status.value=site.shareCopiedLabel; } catch { statusTone.value='error'; status.value=site.articleCopyFailureLabel || site.shareCopiedLabel; } setTimeout(()=>status.value='',1800);}
 async function systemShare(){
   if (!navigator.share) return copy();
