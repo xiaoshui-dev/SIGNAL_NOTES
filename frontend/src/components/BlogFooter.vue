@@ -10,7 +10,7 @@ onMounted(() => loadSite().catch(() => {}));
 <template>
   <footer class="blog-footer">
     <div><BrandLogo to="/blog" /><p>{{ site.footerDescription }}</p></div>
-    <nav aria-label="页脚导航"><RouterLink to="/">站点介绍</RouterLink><RouterLink to="/blog/categories">分类</RouterLink><RouterLink to="/blog/tags">标签</RouterLink><RouterLink to="/blog/about">关于</RouterLink><RouterLink to="/blog/contact">联系</RouterLink><RouterLink to="/blog/privacy">隐私</RouterLink><RouterLink to="/blog/archives">归档</RouterLink><a href="/rss.xml"><Rss :size="14" /> RSS</a></nav>
+    <nav :aria-label="site.blogNavHomeLabel"><RouterLink to="/">{{ site.blogNavHomeLabel }}</RouterLink><RouterLink to="/blog/categories">{{ site.blogNavCategoriesLabel }}</RouterLink><RouterLink to="/blog/tags">{{ site.blogNavTagsLabel }}</RouterLink><RouterLink to="/blog/about">{{ site.blogNavAboutLabel }}</RouterLink><RouterLink to="/blog/contact">{{ site.landingFooterContactLabel }}</RouterLink><RouterLink to="/blog/privacy">{{ site.landingFooterPrivacyLabel }}</RouterLink><RouterLink to="/blog/archives">{{ site.blogNavArchivesLabel }}</RouterLink><a href="/rss.xml"><Rss :size="14" /> {{ site.blogNavRssLabel }}</a></nav>
     <small>{{ site.copyrightText }} · {{ site.licenseText }}</small>
   </footer>
 </template>

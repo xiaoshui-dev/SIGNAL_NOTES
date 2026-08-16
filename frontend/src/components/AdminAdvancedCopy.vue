@@ -36,6 +36,14 @@ defineProps({ settings: { type: Object, required: true } });
       <label>搜索页说明<input v-model="settings.searchIntro" /></label>
       <label>博客全部筛选<input v-model="settings.blogFilterAllLabel" /></label>
       <label>博客阅读全文<input v-model="settings.blogReadMoreLabel" /></label>
+      <label>博客导航文章<input v-model="settings.blogNavPostsLabel" /></label>
+      <label>博客导航分类<input v-model="settings.blogNavCategoriesLabel" /></label>
+      <label>博客导航标签<input v-model="settings.blogNavTagsLabel" /></label>
+      <label>博客导航归档<input v-model="settings.blogNavArchivesLabel" /></label>
+      <label>博客导航关于<input v-model="settings.blogNavAboutLabel" /></label>
+      <label>博客搜索占位<input v-model="settings.blogNavSearchPlaceholder" /></label>
+      <label>博客返回介绍页<input v-model="settings.blogNavHomeLabel" /></label>
+      <label>博客 RSS 标签<input v-model="settings.blogNavRssLabel" /></label>
       <label class="wide">搜索结果摘要模板<input v-model="settings.searchResultSummary" /></label>
       <label>分类页标题<input v-model="settings.categoriesTitle" /></label>
       <label>分类页说明<input v-model="settings.categoriesIntro" /></label>

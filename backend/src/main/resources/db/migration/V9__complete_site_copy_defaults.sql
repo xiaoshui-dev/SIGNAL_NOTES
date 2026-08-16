@@ -109,4 +109,5 @@ INSERT INTO site_settings (setting_key, setting_value) VALUES
   ,('commentsValidationError', '请填写昵称，评论需为 2-2000 个字'),('commentsSubmittedMessage', '评论已提交，审核通过后会显示'),('commentsSubmitError', '评论提交失败，请稍后重试'),('commentsReportError', '举报提交失败，请稍后重试')
   ,('articleCopyLinkLabel', '复制链接'),('articleCopySuccessLabel', '文章标题、摘要和链接已复制'),('articleCopyFailureLabel', '请手动复制地址栏链接')
   ,('privacyUpdatedPrefix', '最后更新：'),('notFoundBackLabel', '返回博客'),('statusRetryLabel', '重试'),('statusBackLabel', '返回博客'),('statusSearchLabel', '搜索文章')
+  ,('blogNavPostsLabel', '文章'),('blogNavCategoriesLabel', '分类'),('blogNavTagsLabel', '标签'),('blogNavArchivesLabel', '归档'),('blogNavAboutLabel', '关于'),('blogNavSearchPlaceholder', '搜索'),('blogNavHomeLabel', '站点介绍'),('blogNavRssLabel', 'RSS')
 ON DUPLICATE KEY UPDATE setting_key = VALUES(setting_key);

@@ -27,7 +27,7 @@ const topics = computed(() => {
 });
 const featured = computed(() => posts.value.slice(0, 3));
 
-onMounted(async () => {
+async function refreshLanding() {
   loadSite().catch(() => {});
   contentStatus.value = 'loading';
   try {
@@ -36,7 +36,8 @@ onMounted(async () => {
     categories.value = Array.isArray(categoryData) ? categoryData : [];
     contentStatus.value = posts.value.length ? 'ready' : 'empty';
   } catch { contentStatus.value = 'error'; }
-});
+}
+onMounted(refreshLanding);
 </script>
 
 <template>
@@ -48,7 +49,7 @@ onMounted(async () => {
       <div class="hero-status reveal reveal-4"><div><span>{{ site.landingRecentLabel }}</span><strong>{{ posts[0]?.publishedAt || '—' }}</strong></div><div><span>{{ site.landingTopicsLabel }}</span><strong>{{ site.landingStatusTopics }}</strong></div><a href="#featured">{{ site.landingExploreLabel }} <ArrowDown :size="15" /></a></div>
     </section>
     <section id="topics" class="landing-band topic-band"><div class="section-kicker">01 / {{ site.landingTopicsSectionLabel }}</div><div class="band-heading"><h2>{{ site.landingTopicsTitle }}</h2><p>{{ site.landingTopicsIntro }}</p></div><div class="topic-index"><RouterLink v-for="topic in topics" :key="topic.name" class="topic-row" :to="{ path: '/blog', query: { topic: topic.name } }"><span>{{ topic.number }}</span><strong>{{ topic.name }}</strong><small>{{ topic.summary }}</small><ArrowRight :size="20" /></RouterLink></div></section>
-    <section id="featured" class="landing-band featured-band"><div class="section-kicker">02 / {{ site.landingSelectedLabel }}</div><div class="band-heading compact"><h2>{{ site.featuredTitle }}</h2><RouterLink to="/blog">{{ site.landingAllPostsLabel }} <ArrowRight :size="17" /></RouterLink></div><div v-if="featured.length" class="featured-grid"><RouterLink v-for="(post, index) in featured" :key="post.id" class="feature-story" :class="index === 0 ? 'feature-main' : index === 1 ? 'feature-text' : 'feature-accent'" :to="`/blog/posts/${post.slug}`"><img v-if="index === 0" :src="post.cover" :alt="post.coverAlt" /><div><span>{{ post.category }} · {{ post.readMinutes }} 分钟</span><h3>{{ post.title }}</h3><p v-if="index === 1">{{ post.excerpt }}</p><ArrowRight v-if="index === 2" :size="24" /></div></RouterLink></div><div v-else class="landing-empty"><span>{{ contentStatus === 'error' ? site.noConnectionLabel : contentStatus === 'empty' ? (site.noPublicPosts || site.noNotesLabel) : (site.landingLoadingLabel || site.noPublicPostsDescription) }}</span><h3 v-if="contentStatus === 'error'">{{ site.noConnectionTitle || site.noNotesLabel }}</h3><h3 v-else-if="contentStatus === 'empty'">{{ site.noPublicPosts || site.noNotesLabel }}</h3><p>{{ contentStatus === 'error' ? site.noConnectionDescription : contentStatus === 'empty' ? site.noPublicPostsDescription : (site.landingLoadingLabel || site.noPublicPostsDescription) }}</p><RouterLink class="button" to="/blog">{{ site.landingAllPostsLabel }}</RouterLink></div></section>
+    <section id="featured" class="landing-band featured-band"><div class="section-kicker">02 / {{ site.landingSelectedLabel }}</div><div class="band-heading compact"><h2>{{ site.featuredTitle }}</h2><RouterLink to="/blog">{{ site.landingAllPostsLabel }} <ArrowRight :size="17" /></RouterLink></div><div v-if="featured.length" class="featured-grid"><RouterLink v-for="(post, index) in featured" :key="post.id" class="feature-story" :class="index === 0 ? 'feature-main' : index === 1 ? 'feature-text' : 'feature-accent'" :to="`/blog/posts/${post.slug}`"><img v-if="index === 0" :src="post.cover" :alt="post.coverAlt" /><div><span>{{ post.category }} · {{ post.readMinutes }} 分钟</span><h3>{{ post.title }}</h3><p v-if="index === 1">{{ post.excerpt }}</p><ArrowRight v-if="index === 2" :size="24" /></div></RouterLink></div><div v-else class="landing-empty"><span>{{ contentStatus === 'error' ? site.noConnectionLabel : contentStatus === 'empty' ? (site.noPublicPosts || site.noNotesLabel) : (site.landingLoadingLabel || site.noPublicPostsDescription) }}</span><h3 v-if="contentStatus === 'error'">{{ site.noConnectionTitle || site.noNotesLabel }}</h3><h3 v-else-if="contentStatus === 'empty'">{{ site.noPublicPosts || site.noNotesLabel }}</h3><p>{{ contentStatus === 'error' ? site.noConnectionDescription : contentStatus === 'empty' ? site.noPublicPostsDescription : (site.landingLoadingLabel || site.noPublicPostsDescription) }}</p><button v-if="contentStatus === 'error'" class="button" type="button" @click="refreshLanding">{{ site.reconnectLabel }}</button><RouterLink v-else class="button" to="/blog">{{ site.landingAllPostsLabel }}</RouterLink></div></section>
     <section id="about" class="landing-band about-band"><div class="section-kicker">03 / {{ site.landingAboutSectionLabel }}</div><div class="about-copy"><h2>{{ site.aboutTitle }}</h2><p>{{ site.aboutLead }} {{ site.aboutBody }}</p><RouterLink class="text-link" to="/blog/about">{{ site.landingAboutLink }} <ArrowRight :size="17" /></RouterLink></div></section>
     <footer class="landing-footer"><BrandLogo light /><p>{{ site.footerDescription }}</p><div><RouterLink to="/blog">{{ site.landingFooterEnterLabel }}</RouterLink><RouterLink to="/blog/about">{{ site.landingFooterAboutLabel }}</RouterLink><RouterLink to="/blog/contact">{{ site.landingFooterContactLabel }}</RouterLink><RouterLink to="/blog/privacy">{{ site.landingFooterPrivacyLabel }}</RouterLink></div><small>{{ site.copyrightText }} · {{ site.licenseText }}</small></footer>
   </main>

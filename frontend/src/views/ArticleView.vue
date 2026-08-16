@@ -2,7 +2,7 @@
 import DOMPurify from 'dompurify';
 import { marked } from 'marked';
 import { ArrowLeft, ArrowRight, CalendarDays, ChevronRight, Clock3, Copy, FolderOpen, Hash, Maximize2, X } from 'lucide-vue-next';
-import { computed, nextTick, onMounted, onUnmounted, ref } from 'vue';
+import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue';
 import { useRoute } from 'vue-router';
 import BlogHeader from '../components/BlogHeader.vue';
 import BlogFooter from '../components/BlogFooter.vue';
@@ -41,26 +41,62 @@ const previous = computed(() => currentIndex.value > 0 ? allPosts.value[currentI
 const next = computed(() => currentIndex.value >= 0 ? allPosts.value[currentIndex.value + 1] : null);
 function orderComments(list){return list.filter(item=>!item.parentId).flatMap(parent=>[parent,...list.filter(item=>item.parentId===parent.id)]);}
 
-onMounted(async () => {
+let loadGeneration = 0;
+let removeArticleInteractionListeners = () => {};
+
+async function loadArticle(slug) {
+  const generation = ++loadGeneration;
+  post.value = null;
+  allPosts.value = [];
+  comments.value = [];
+  comment.value = { name: '', content: '' };
+  replyTo.value = null;
+  commentStatus.value = '';
+  lightbox.value = { open: false, src: '', alt: '' };
+  continueFrom.value = 0;
+  document.getElementById('signal-article-jsonld')?.remove();
+  document.title = `${site.siteName} | ${site.siteShortName}`;
+  document.documentElement.style.removeProperty('--reading-progress');
+  removeArticleInteractionListeners();
   await loadSite().catch(() => {});
   try {
-    const value = await apiRequest(`/posts/${route.params.slug}`);
-    if (value) post.value = value;
-    const list = await apiRequest('/posts');
+    const [value, list] = await Promise.all([
+      apiRequest(`/posts/${encodeURIComponent(slug)}`),
+      apiRequest('/posts'),
+    ]);
+    if (generation !== loadGeneration || route.params.slug !== slug) return;
+    post.value = value || null;
     allPosts.value = Array.isArray(list) ? list : [];
-  } catch (error) { commentStatus.value = error.message || '文章服务暂时不可用'; }
-  if (post.value) {
-    setPageSeo({ title: `${post.value.title} | ${site.siteName}`, description: post.value.excerpt, canonical: new URL(`/blog/posts/${post.value.slug}`, window.location.origin).href, type: 'article' });
-    setArticleJsonLd(post.value);
-    continueFrom.value = Number(localStorage.getItem(`signal-reading-${post.value.slug}`) || 0);
+  } catch (error) {
+    if (generation === loadGeneration) commentStatus.value = error.message || '文章服务暂时不可用';
+    return;
   }
+  if (generation !== loadGeneration || !post.value) return;
+  setPageSeo({ title: `${post.value.title} | ${site.siteName}`, description: post.value.excerpt, canonical: new URL(`/blog/posts/${post.value.slug}`, window.location.origin).href, type: 'article' });
+  setArticleJsonLd(post.value);
+  continueFrom.value = Number(localStorage.getItem(`signal-reading-${post.value.slug}`) || 0);
+  try {
+    const list = await apiRequest(`/comments?postSlug=${encodeURIComponent(slug)}`);
+    if (generation === loadGeneration) comments.value = orderComments(Array.isArray(list) ? list : []);
+  } catch (error) {
+    if (generation === loadGeneration) commentStatus.value = error.message || '评论服务暂时不可用';
+  }
+  if (generation !== loadGeneration) return;
   await nextTick();
+  if (generation !== loadGeneration) return;
   setupArticleInteractions();
-  window.addEventListener('scroll', progress, { passive: true });
-  try { comments.value = orderComments(await apiRequest(`/comments?postSlug=${route.params.slug}`)); } catch (error) { comments.value = []; commentStatus.value = error.message || '评论服务暂时不可用'; }
-});
+  progress();
+}
+
+watch(() => route.params.slug, (slug) => {
+  if (slug) loadArticle(String(slug));
+}, { immediate: true });
+
+onMounted(() => window.addEventListener('scroll', progress, { passive: true }));
 
 onUnmounted(() => {
+  loadGeneration += 1;
+  removeArticleInteractionListeners();
   document.title = `${site.siteName} | ${site.siteShortName}`;
   document.getElementById('signal-article-jsonld')?.remove();
   window.removeEventListener('scroll', progress);
@@ -75,7 +111,9 @@ function progress() {
 }
 
 function setupArticleInteractions() {
+  removeArticleInteractionListeners();
   if (!contentRef.value) return;
+  const cleanups = [];
   contentRef.value.querySelectorAll('pre').forEach((pre) => {
     if (pre.querySelector('.code-copy')) return;
     const button = document.createElement('button'); button.className = 'code-copy'; button.type = 'button'; button.textContent = '复制代码';
@@ -85,8 +123,14 @@ function setupArticleInteractions() {
       catch { button.textContent = '请手动复制'; setTimeout(() => { button.textContent = '复制代码'; }, 1600); }
     });
     pre.appendChild(button);
+    cleanups.push(() => button.remove());
   });
-  contentRef.value.querySelectorAll('img').forEach((image) => image.addEventListener('click', () => { lightbox.value = { open: true, src: image.currentSrc || image.src, alt: image.alt }; }));
+  contentRef.value.querySelectorAll('img').forEach((image) => {
+    const onClick = () => { lightbox.value = { open: true, src: image.currentSrc || image.src, alt: image.alt }; };
+    image.addEventListener('click', onClick);
+    cleanups.push(() => image.removeEventListener('click', onClick));
+  });
+  removeArticleInteractionListeners = () => { cleanups.splice(0).forEach((cleanup) => cleanup()); };
 }
 
 function scrollToContinue() { document.querySelector('.article-content')?.scrollIntoView({ behavior: 'smooth', block: 'start' }); setTimeout(() => window.scrollTo({ top: (document.documentElement.scrollHeight - window.innerHeight) * continueFrom.value / 100, behavior: 'smooth' }), 120); }

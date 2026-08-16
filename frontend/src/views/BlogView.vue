@@ -21,6 +21,7 @@ const items = ref([]);
 const categories = ref([]);
 const tags = ref([]);
 const apiMode = ref("正在连接内容服务");
+const contentStatus = ref("loading");
 const loading = ref(false);
 const draft = ref(route.query.q || "");
 const searchError = ref("");
@@ -37,21 +38,22 @@ const contactStatus = ref("");
 
 async function refreshPosts() {
   loading.value = true;
+  if (!items.value.length && !categories.value.length && !tags.value.length) contentStatus.value = "loading";
   try {
-    const [posts, categoryData, tagData] = await Promise.all([
+    const [posts, categoryData, tagData] = await Promise.allSettled([
       loadPosts(),
       loadCategories(),
       loadTags(),
     ]);
-    items.value = Array.isArray(posts) ? posts : [];
-    categories.value = Array.isArray(categoryData) ? categoryData : [];
-    tags.value = Array.isArray(tagData) ? tagData : [];
-    apiMode.value = "MySQL 实时数据";
+    if (posts.status === "fulfilled") items.value = Array.isArray(posts.value) ? posts.value : [];
+    if (categoryData.status === "fulfilled") categories.value = Array.isArray(categoryData.value) ? categoryData.value : [];
+    if (tagData.status === "fulfilled") tags.value = Array.isArray(tagData.value) ? tagData.value : [];
+    const failed = [posts, categoryData, tagData].find((result) => result.status === "rejected");
+    apiMode.value = failed ? `后端未连接 · ${failed.reason?.message || "内容服务暂时不可用"}` : "MySQL 实时数据";
+    contentStatus.value = failed ? "error" : "ready";
   } catch (error) {
-    items.value = [];
-    categories.value = [];
-    tags.value = [];
     apiMode.value = `后端未连接 · ${error.message || "内容服务暂时不可用"}`;
+    contentStatus.value = "error";
   } finally {
     loading.value = false;
   }
@@ -68,6 +70,9 @@ watch(
 );
 
 const section = computed(() => route.path.split("/")[2] || "");
+const isConnectionError = computed(() => contentStatus.value === "error");
+const hasUsableContent = computed(() => Boolean(items.value.length || categories.value.length || tags.value.length));
+const isBlockingConnectionError = computed(() => isConnectionError.value && !hasUsableContent.value);
 const topic = computed(() => route.query.topic || "");
 const routeSlug = computed(() => route.params.slug || "");
 const routeAuthor = computed(() => ({
@@ -210,6 +215,7 @@ async function doContact() {
   <div class="blog-shell">
     <BlogHeader />
     <main class="blog-main" :class="{ 'compact-main': section }">
+      <div v-if="isConnectionError && hasUsableContent" class="empty-state inline-load-error"><span>{{ site.noConnectionLabel }}</span><h2>{{ site.noConnectionTitle }}</h2><p>{{ site.noConnectionDescription }}</p><button class="button" type="button" :disabled="loading" @click="refreshPosts">{{ loading ? site.reconnectingLabel : site.reconnectLabel }}</button></div>
       <template v-if="!section">
         <section class="blog-intro">
           <div>
@@ -262,25 +268,23 @@ async function doContact() {
           </article>
         </section>
         <div v-else class="empty-state">
-            <span>{{
-            apiMode.includes("未连接") ? site.noConnectionLabel : site.noNotesLabel
-          }}</span>
+          <span>{{ contentStatus === 'loading' ? site.landingLoadingLabel : isBlockingConnectionError ? site.noConnectionLabel : site.noNotesLabel }}</span>
           <h2>
             {{
-              apiMode.includes("未连接")
+              isBlockingConnectionError
                 ? site.noConnectionTitle
-                : site.noPublicPosts
+                : contentStatus === 'loading' ? site.landingLoadingLabel : site.noPublicPosts
             }}
           </h2>
           <p>
             {{
-              apiMode.includes("未连接")
+              isBlockingConnectionError
                 ? site.noConnectionDescription
                 : site.noPublicPostsDescription
             }}
           </p>
           <button
-            v-if="apiMode.includes('未连接')"
+            v-if="isBlockingConnectionError"
             class="button"
             type="button"
             :disabled="loading"
@@ -329,10 +333,11 @@ async function doContact() {
         <small v-if="searchError" class="form-error" role="alert">{{
           searchError
         }}</small>
-        <div v-if="route.query.q" class="search-summary">
+        <div v-if="isBlockingConnectionError" class="empty-state"><span>{{ site.noConnectionLabel }}</span><h2>{{ site.noConnectionTitle }}</h2><p>{{ site.noConnectionDescription }}</p><button class="button" type="button" :disabled="loading" @click="refreshPosts">{{ loading ? site.reconnectingLabel : site.reconnectLabel }}</button></div>
+        <div v-if="route.query.q && !isBlockingConnectionError" class="search-summary">
           {{ site.searchResultSummary.replace('{query}', route.query.q).replace('{count}', searchResults.length).replace('{page}', Math.min(searchPage, searchPages)).replace('{pages}', searchPages) }}
         </div>
-        <section class="search-results">
+        <section v-if="!isBlockingConnectionError" class="search-results">
           <article v-for="post in pagedSearchResults" :key="post.id">
             <div>
               <span>{{ post.category }}</span
@@ -362,7 +367,7 @@ async function doContact() {
           </article>
         </section>
         <nav
-          v-if="searchPages > 1"
+          v-if="!isBlockingConnectionError && searchPages > 1"
           class="result-pagination"
           aria-label="搜索结果分页"
         >
@@ -385,12 +390,12 @@ async function doContact() {
             {{ site.searchPaginationNext }}
           </button>
         </nav>
-        <div v-if="route.query.q && !searchResults.length" class="empty-state">
+        <div v-if="!isBlockingConnectionError && route.query.q && !searchResults.length" class="empty-state">
           <span>NO SIGNAL</span>
           <h2>{{ site.noResultsTitle }}</h2>
           <p>{{ site.noResultsDescription }}</p>
         </div>
-        <div v-if="!route.query.q" class="search-suggestions">
+        <div v-if="!isBlockingConnectionError && !route.query.q" class="search-suggestions">
           <h2>{{ site.searchSuggestionsTitle }}</h2>
           <button
             v-for="tag in tags.slice(0, 8)"
@@ -410,7 +415,8 @@ async function doContact() {
             <h1>{{ routeSlug }}</h1>
             <p>{{ site.categoryRouteIntro }}</p>
           </header>
-          <section class="post-list compact-post-list">
+          <div v-if="isBlockingConnectionError" class="empty-state"><span>{{ site.noConnectionLabel }}</span><h2>{{ site.noConnectionTitle }}</h2><p>{{ site.noConnectionDescription }}</p><button class="button" type="button" :disabled="loading" @click="refreshPosts">{{ loading ? site.reconnectingLabel : site.reconnectLabel }}</button></div>
+          <section v-if="!isBlockingConnectionError" class="post-list compact-post-list">
             <article
               v-for="post in items.filter(
                 (item) =>
@@ -433,14 +439,15 @@ async function doContact() {
                 <p>{{ post.excerpt }}</p>
               </div>
             </article>
-          </section><div v-if="!items.some((item) => item.category === routeSlug || item.category?.toLowerCase() === routeSlug.toLowerCase())" class="empty-state"><span>{{ site.noNotesLabel }}</span><h2>{{ site.noPublicPosts }}</h2><p>{{ site.noPublicPostsDescription }}</p><RouterLink class="button" to="/blog/categories">{{ site.categoriesTitle }}</RouterLink></div></template
+          </section><div v-if="!isBlockingConnectionError && !items.some((item) => item.category === routeSlug || item.category?.toLowerCase() === routeSlug.toLowerCase())" class="empty-state"><span>{{ site.noNotesLabel }}</span><h2>{{ site.noPublicPosts }}</h2><p>{{ site.noPublicPostsDescription }}</p><RouterLink class="button" to="/blog/categories">{{ site.categoriesTitle }}</RouterLink></div></template
         ><template v-else
           ><header class="page-heading">
             <span>TOPICS / 003</span>
             <h1>{{ site.categoriesTitle }}</h1>
             <p>{{ site.categoriesIntro }}</p>
           </header>
-          <section class="category-grid">
+          <div v-if="isBlockingConnectionError" class="empty-state"><span>{{ site.noConnectionLabel }}</span><h2>{{ site.noConnectionTitle }}</h2><p>{{ site.noConnectionDescription }}</p><button class="button" type="button" :disabled="loading" @click="refreshPosts">{{ loading ? site.reconnectingLabel : site.reconnectLabel }}</button></div>
+          <section v-else class="category-grid">
             <RouterLink
               v-for="(category, index) in categories"
               :key="category.slug"
@@ -452,8 +459,9 @@ async function doContact() {
               <p>{{ category.description }}</p>
               <small>{{ site.categoryPostCountLabel.replace('{count}', category.count) }}</small></RouterLink
             >
+            <p v-if="!categories.length" class="admin-empty">{{ site.noPublicPosts }}</p>
           </section>
-          <section class="tag-cloud">
+          <section v-if="!isBlockingConnectionError" class="tag-cloud">
             <div class="section-title">
               <span>{{ site.categoriesSectionLabel }}</span>
               <h2>{{ site.tagsTitle }}</h2>
@@ -466,6 +474,7 @@ async function doContact() {
                 >#{{ tag.name }} <small>{{ site.tagPostCountLabel.replace('{count}', tag.count) }}</small></RouterLink
               >
             </div>
+            <p v-if="!tags.length" class="admin-empty">{{ site.noPublicTags }}</p>
           </section></template
         ></template
       >
@@ -476,7 +485,8 @@ async function doContact() {
             <h1>#{{ routeSlug }}</h1>
             <p>{{ site.tagRouteIntro }}</p>
           </header>
-          <section class="post-list compact-post-list">
+          <div v-if="isBlockingConnectionError" class="empty-state"><span>{{ site.noConnectionLabel }}</span><h2>{{ site.noConnectionTitle }}</h2><p>{{ site.noConnectionDescription }}</p><button class="button" type="button" :disabled="loading" @click="refreshPosts">{{ loading ? site.reconnectingLabel : site.reconnectLabel }}</button></div>
+          <section v-else class="post-list compact-post-list">
             <article
               v-for="post in items.filter((item) =>
                 item.tags?.includes(routeSlug),
@@ -499,7 +509,7 @@ async function doContact() {
             </article>
           </section>
           <div
-            v-if="!items.some((item) => item.tags?.includes(routeSlug))"
+            v-if="!isBlockingConnectionError && !items.some((item) => item.tags?.includes(routeSlug))"
             class="empty-state"
           >
             <span>{{ site.noNotesLabel }}</span>
@@ -515,7 +525,8 @@ async function doContact() {
             <h1>{{ site.tagsTitle }}</h1>
             <p>{{ site.tagsIntro }}</p>
           </header>
-          <section class="tag-cloud tag-index-page">
+          <div v-if="isBlockingConnectionError" class="empty-state"><span>{{ site.noConnectionLabel }}</span><h2>{{ site.noConnectionTitle }}</h2><p>{{ site.noConnectionDescription }}</p><button class="button" type="button" :disabled="loading" @click="refreshPosts">{{ loading ? site.reconnectingLabel : site.reconnectLabel }}</button></div>
+          <section v-else class="tag-cloud tag-index-page">
             <div>
               <RouterLink
                 v-for="tag in tags"
@@ -578,7 +589,8 @@ async function doContact() {
             }}
           </p>
         </header>
-        <section class="archive-list">
+        <div v-if="isBlockingConnectionError" class="empty-state"><span>{{ site.noConnectionLabel }}</span><h2>{{ site.noConnectionTitle }}</h2><p>{{ site.noConnectionDescription }}</p><button class="button" type="button" :disabled="loading" @click="refreshPosts">{{ loading ? site.reconnectingLabel : site.reconnectLabel }}</button></div>
+        <section v-else class="archive-list">
           <div
             v-for="group in archiveGroups"
             :key="group.year"

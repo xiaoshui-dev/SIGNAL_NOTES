@@ -48,6 +48,7 @@ export const site = reactive({
   landingNavPosts: '文章', landingNavTopics: '主题', landingNavAbout: '关于', heroEnterBlog: '进入博客', heroViewFeatured: '查看精选',
   landingSelectedLabel: '精选', landingTopicsSectionLabel: 'TOPICS', landingAboutSectionLabel: 'ABOUT', landingAllPostsLabel: '全部文章', landingFooterEnterLabel: '进入博客', landingFooterAboutLabel: '关于',
   landingFooterContactLabel: '联系', landingFooterPrivacyLabel: '隐私', blogFilterAllLabel: '全部', blogReadMoreLabel: '阅读全文',
+  blogNavPostsLabel: '文章', blogNavCategoriesLabel: '分类', blogNavTagsLabel: '标签', blogNavArchivesLabel: '归档', blogNavAboutLabel: '关于', blogNavSearchPlaceholder: '搜索', blogNavHomeLabel: '站点介绍', blogNavRssLabel: 'RSS',
   noConnectionLabel: 'NO CONNECTION', noConnectionTitle: '内容服务暂时不可用', noConnectionDescription: '请确认后端服务已启动，再重新连接。',
   reconnectLabel: '重新连接内容服务', reconnectingLabel: '正在重新连接…', listEndLabel: 'END OF NOTES', listEndDescription: '已经显示全部 {count} 篇文章',
   subscribeEyebrow: 'STAY IN SIGNAL', subscribeEmailPlaceholder: 'your@email.com', subscribeButtonLabel: '订阅',

@@ -230,7 +230,7 @@ Describe 'Signal Notes launcher files' {
         $adminController | Should Match 'SiteSettingPolicy\.validateAndNormalize'
         $policy | Should Match '"shareTemplate"'
         $policy | Should Match 'ADMIN_ONLY_KEYS = Set\.of\(\)'
-        $policy | Should Match 'MAX_KEYS = 192'
+        $policy | Should Match 'MAX_KEYS = 200'
         $siteModule | Should Match 'siteRequestGeneration'
         $siteModule | Should Match 'export function applySite'
         $siteModule | Should Match 'requestGeneration === siteRequestGeneration'
@@ -280,5 +280,58 @@ Describe 'Signal Notes launcher files' {
         $startScript = Get-Content -Raw (Join-Path $projectRoot 'start-blog.ps1')
         $startScript | Should Match 'Write-BlogListenerProcessRecord -Path \$backendPidPath'
         $startScript | Should Match 'Write-BlogListenerProcessRecord -Path \$frontendPidPath'
+    }
+}
+
+Describe 'Signal Notes public reading experience guards' {
+    It 'reloads article data when the route slug changes and guards stale requests' {
+        $article = Get-Content -Raw (Join-Path $projectRoot 'frontend/src/views/ArticleView.vue')
+        $article | Should Match 'async function loadArticle\(slug\)'
+        $article | Should Match 'watch\(\(\) => route\.params\.slug'
+        $article | Should Match 'loadGeneration'
+        $article | Should Match 'apiRequest\(`/comments\?postSlug='
+        $article | Should Match 'removeArticleInteractionListeners'
+    }
+
+    It 'keeps public taxonomy/search/archive states actionable on connection failure' {
+        $blog = Get-Content -Raw (Join-Path $projectRoot 'frontend/src/views/BlogView.vue')
+        $landing = Get-Content -Raw (Join-Path $projectRoot 'frontend/src/views/LandingView.vue')
+        $blog | Should Match 'contentStatus = ref\("loading"\)'
+        $blog | Should Match 'Promise\.allSettled'
+        $blog | Should Match 'hasUsableContent'
+        $blog | Should Match 'isConnectionError'
+        $blog | Should Match 'site\.noConnectionTitle'
+        $blog | Should Match '@click="refreshPosts"'
+        $landing | Should Match 'async function refreshLanding'
+        $landing | Should Match '@click="refreshLanding"'
+    }
+
+    It 'binds configurable public navigation and footer labels' {
+        $header = Get-Content -Raw (Join-Path $projectRoot 'frontend/src/components/BlogHeader.vue')
+        $footer = Get-Content -Raw (Join-Path $projectRoot 'frontend/src/components/BlogFooter.vue')
+        $site = Get-Content -Raw (Join-Path $projectRoot 'frontend/src/site.js')
+        $header | Should Match 'site\.blogNavPostsLabel'
+        $header | Should Match 'site\.blogNavSearchPlaceholder'
+        $footer | Should Match 'site\.blogNavRssLabel'
+        $site | Should Match 'blogNavCategoriesLabel'
+        $admin = Get-Content -Raw (Join-Path $projectRoot 'frontend/src/views/AdminView.vue')
+        $admin | Should Match "key !== 'mail\.passwordConfigured'"
+    }
+
+    It 'refreshes open share posters and falls back when system share rejects' {
+        $poster = Get-Content -Raw (Join-Path $projectRoot 'frontend/src/components/SharePoster.vue')
+        $poster | Should Match 'watch\(\[open, variant'
+        $poster | Should Match 'site\.siteShortName'
+        $poster | Should Match 'async function systemShare'
+        $poster | Should Match 'catch \{ await copy\(\); \}'
+    }
+
+    It 'keeps supporting text readable and focusable' {
+        $styles = Get-Content -Raw (Join-Path $projectRoot 'frontend/src/assets/styles.css')
+        $styles | Should Match '(?s)\.blog-shell \.empty-state.*?font-size: 13px'
+        $styles | Should Match '(?s)\.admin-shell \.admin-table.*?font-size: 13px'
+        $styles | Should Match ':focus-visible'
+        $styles | Should Match 'min-width: 40px; min-height: 40px'
+        $styles | Should Match '\.inline-success\.is-error'
     }
 }

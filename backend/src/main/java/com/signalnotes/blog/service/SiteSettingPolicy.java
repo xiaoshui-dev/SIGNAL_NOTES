@@ -7,7 +7,7 @@ import java.util.Set;
 /** Central policy for settings that may be edited or returned by the site APIs. */
 public final class SiteSettingPolicy {
     // Keeps the full admin form bounded while allowing the explicitly controlled settings contract to grow.
-    public static final int MAX_KEYS = 192;
+    public static final int MAX_KEYS = 200;
     public static final int MAX_VALUE_LENGTH = 20_000;
     public static final int MAX_TOTAL_LENGTH = 300_000;
     public static final Set<String> ADMIN_ONLY_KEYS = Set.of();
@@ -26,7 +26,7 @@ public final class SiteSettingPolicy {
         "statusDefaultDescription", "authorName", "authorRole", "authorBio", "footerDescription", "copyrightText", "licenseText", "subscribeTitle",
         "subscribeDescription", "shareTemplate", "landingLoadingLabel", "shareArticleLabel", "sharePosterTitle", "sharePosterLoadingLabel", "shareCopyLinkLabel", "shareDownloadLabel", "shareSystemLabel", "shareCopiedLabel", "shareSavedLabel", "shareScanLabel", "shareQrDescription", "shareLandscapeLabel", "sharePortraitLabel", "landingNavPosts", "landingNavTopics", "landingNavAbout", "heroEnterBlog", "heroViewFeatured",
         "landingSelectedLabel", "landingTopicsSectionLabel", "landingAboutSectionLabel", "landingAllPostsLabel", "landingFooterEnterLabel", "landingFooterAboutLabel", "landingFooterContactLabel",
-        "landingFooterPrivacyLabel", "blogFilterAllLabel", "blogReadMoreLabel", "noConnectionLabel", "noConnectionTitle", "noConnectionDescription",
+        "landingFooterPrivacyLabel", "blogFilterAllLabel", "blogReadMoreLabel", "blogNavPostsLabel", "blogNavCategoriesLabel", "blogNavTagsLabel", "blogNavArchivesLabel", "blogNavAboutLabel", "blogNavSearchPlaceholder", "blogNavHomeLabel", "blogNavRssLabel", "noConnectionLabel", "noConnectionTitle", "noConnectionDescription",
         "reconnectLabel", "reconnectingLabel", "listEndLabel", "listEndDescription", "subscribeEyebrow", "subscribeEmailPlaceholder",
         "subscribeButtonLabel", "searchInputPlaceholder", "searchButtonLabel", "searchResultSummary", "searchPaginationPrevious", "searchPaginationNext",
         "searchResultLink", "categoriesSectionLabel", "categoryPostCountLabel", "tagPostCountLabel", "authorSectionLabel", "authorPostCountLabel",

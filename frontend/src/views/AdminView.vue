@@ -242,7 +242,8 @@ async function saveSettings() { if (adminLoading.value || adminLoadError.value) 
   if (mailConfigurationState.value.tone === 'error') return flashError(mailConfigurationState.value.detail);
   settingsSaving.value = true;
   try {
-    const savedSettings = await adminRequest('/admin/settings', { method: 'PUT', body: JSON.stringify(settings.value) });
+    const settingsPayload = Object.fromEntries(Object.entries(settings.value).filter(([key]) => key !== 'mail.passwordConfigured'));
+    const savedSettings = await adminRequest('/admin/settings', { method: 'PUT', body: JSON.stringify(settingsPayload) });
     settingsMutationVersion += 1;
     settings.value = { ...settings.value, ...savedSettings };
     const result = Object.fromEntries(Object.entries(savedSettings).filter(([key]) => !key.startsWith('mail.')));
