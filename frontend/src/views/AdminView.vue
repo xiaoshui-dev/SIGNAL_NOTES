@@ -8,6 +8,7 @@ import { computed, nextTick, onMounted, onUnmounted, reactive, ref, watch } from
 import { useRoute, useRouter } from 'vue-router';
 import { adminRequest, apiRequest, createAdminToken } from '../api';
 import { adminAccessForRole, canAccessAdminRoute } from '../adminAccess';
+import { adminLoginPresentation } from '../adminLoginPresentation';
 import { createEditorAutosave, statusForAutosave } from '../editorAutosave';
 import { runMailTest } from '../mailTest';
 import { applySite, site as publicSite } from '../site';
@@ -16,7 +17,13 @@ import AdminAdvancedCopy from '../components/AdminAdvancedCopy.vue';
 const route = useRoute();
 const router = useRouter();
 const authed = ref(localStorage.getItem('signal-admin-auth') === 'true');
-const login = ref({ email: 'admin', password: 'signal2026' });
+const development = import.meta.env.DEV;
+const loginPresentation = adminLoginPresentation({
+  development,
+  demoUsername: development ? 'admin' : '',
+  demoPassword: development ? 'signal2026' : '',
+});
+const login = ref({ ...loginPresentation.credentials });
 const loginError = ref('');
 const menuOpen = ref(false);
 const apiStatus = ref('正在连接数据库');
@@ -282,7 +289,7 @@ async function runBackup() { try { flash('正在导出并校验备份', 'info');
 </script>
 
 <template>
-  <main v-if="!authed" class="admin-login"><div class="admin-login-mark"><span /><span /><span /></div><span class="admin-kicker">SIGNAL NOTES / ADMIN</span><h1>管理你的<br />技术记录。</h1><p>发布文章、整理媒体和处理读者反馈。</p><form @submit.prevent="doLogin"><label>管理员账号<input v-model="login.email" autocomplete="username" /></label><label>密码<input v-model="login.password" type="password" autocomplete="current-password" /></label><button class="button button-primary">进入后台 <ArrowRight :size="17" /></button><small v-if="loginError">{{ loginError }}</small></form><span class="admin-demo-hint">演示账号：admin / signal2026</span></main>
+  <main v-if="!authed" class="admin-login"><div class="admin-login-mark"><span /><span /><span /></div><span class="admin-kicker">SIGNAL NOTES / ADMIN</span><h1>管理你的<br />技术记录。</h1><p>发布文章、整理媒体和处理读者反馈。</p><form @submit.prevent="doLogin"><label>管理员账号<input v-model="login.email" autocomplete="username" /></label><label>密码<input v-model="login.password" type="password" autocomplete="current-password" /></label><button class="button button-primary">进入后台 <ArrowRight :size="17" /></button><small v-if="loginError">{{ loginError }}</small></form><span v-if="loginPresentation.showDemoHint" class="admin-demo-hint">演示账号：{{ loginPresentation.credentials.email }} / {{ loginPresentation.credentials.password }}</span></main>
   <div v-else class="admin-shell" :class="{ 'has-error-notice': savedTone === 'error', 'has-info-notice': savedTone === 'info' }">
     <aside :class="{ 'is-open': menuOpen }"><div class="admin-aside-brand"><span class="brand-mark"><i /><i /><i /></span><div><b>{{ settings.siteName || '脉冲笔记' }}</b><small>ADMIN / CONSOLE</small></div></div><nav><RouterLink v-for="item in nav" :key="item[0]" :to="item[0]"><component :is="item[2]" :size="17" />{{ item[1] }}<em v-if="navBadge(item[0])">{{ navBadge(item[0]) }}</em></RouterLink></nav><div class="admin-aside-bottom"><RouterLink to="/blog"><ArrowRight :size="15" />查看站点</RouterLink><button @click="logout"><LogOut :size="15" />退出登录</button></div></aside>
     <div class="admin-body"><header class="admin-topbar"><button class="admin-menu-toggle" title="打开导航" aria-label="打开导航" @click="menuOpen = !menuOpen"><X v-if="menuOpen" :size="19" /><Menu v-else :size="19" /></button><div class="admin-breadcrumb">ADMIN <span>/</span> SIGNAL NOTES</div><div class="admin-top-actions"><span class="admin-online"><i />{{ apiStatus }}</span><span class="admin-user">林默 · 管理员</span></div></header>
