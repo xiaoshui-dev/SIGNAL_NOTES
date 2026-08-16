@@ -110,6 +110,13 @@ Describe 'Signal Notes launcher files' {
         (Get-Content -Raw (Join-Path $projectRoot 'scripts/blog-dev-common.ps1')) | Should Not Match 'pnpm'
     }
 
+    It 'does not require pnpm in the container frontend build' {
+        $dockerfile = Get-Content -Raw (Join-Path $projectRoot 'frontend/Dockerfile')
+        $dockerfile | Should Not Match '(?i)pnpm'
+        $dockerfile | Should Match '(?i)npm install'
+        $dockerfile | Should Match '(?i)npm run build'
+    }
+
     It 'records the actual service listener processes after startup' {
         $startScript = Get-Content -Raw (Join-Path $projectRoot 'start-blog.ps1')
         $startScript | Should Match 'Write-BlogListenerProcessRecord -Path \$backendPidPath'
