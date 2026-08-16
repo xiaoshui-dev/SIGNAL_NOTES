@@ -1,5 +1,4 @@
-const SITE = '脉冲笔记 | Signal Notes';
-const DEFAULT_DESCRIPTION = '关于 AI、系统、软件工程与数字生活的独立技术博客。';
+import { site } from './site';
 
 function upsert(name, content, attribute = 'name') {
   if (!content) return;
@@ -8,7 +7,7 @@ function upsert(name, content, attribute = 'name') {
   node.setAttribute('content', content);
 }
 
-export function setPageSeo({ title = SITE, description = DEFAULT_DESCRIPTION, canonical = window.location.href, type = 'website' } = {}) {
+export function setPageSeo({ title = `${site.siteName} | ${site.siteShortName}`, description = site.heroSummary, canonical = window.location.href, type = 'website' } = {}) {
   document.title = title;
   upsert('description', description);
   upsert('og:title', title, 'property'); upsert('og:description', description, 'property'); upsert('og:type', type, 'property');

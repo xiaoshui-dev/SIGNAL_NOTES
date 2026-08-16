@@ -240,6 +240,7 @@ img { display: block; max-width: 100%; }
 .blog-intro { display: grid; grid-template-columns: 1.25fr .75fr; align-items: end; gap: clamp(40px, 9vw, 160px); padding-bottom: clamp(56px, 7vw, 100px); }
 .page-index { font: 500 10px/1 'IBM Plex Mono', monospace; color: var(--ink-soft); }
 .blog-intro h1 { margin: 24px 0 0; font: 800 clamp(54px, 7vw, 108px)/1.03 'Noto Serif SC', serif; }
+.blog-intro h1 { white-space: pre-line; }
 .blog-intro > p { color: var(--ink-soft); font-size: 16px; line-height: 1.9; margin: 0; padding-bottom: 8px; }
 .filter-bar { min-height: 62px; display: flex; align-items: stretch; border-top: 1px solid var(--ink); border-bottom: 1px solid var(--line); overflow-x: auto; }
 .filter-bar button { flex: 0 0 auto; padding: 0 22px; border: 0; border-right: 1px solid var(--line); background: transparent; color: var(--ink-soft); cursor: pointer; font-size: 12px; }
@@ -689,9 +690,9 @@ body::before { content: ''; position: fixed; z-index: 100; top: 0; left: 0; widt
 .subscriber-list > div { min-height: 62px; display: grid; grid-template-columns: minmax(0, 1fr) 120px 40px; align-items: center; gap: 16px; padding: 0 22px; border-bottom: 1px solid var(--line); }
 .subscriber-list strong, .subscriber-list small { display: block; }
 .subscriber-list small { margin-top: 6px; color: var(--ink-soft); font-size: 10px; }
-.user-create-form { display: grid; grid-template-columns: 1fr 1.4fr 120px 120px auto; align-items: center; gap: 8px; padding: 20px 22px; border-bottom: 1px solid var(--line); }
+.user-create-form { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); align-items: center; gap: 8px; padding: 20px 22px; border-bottom: 1px solid var(--line); }
 .user-create-form input, .user-create-form select, .user-management-list input, .user-management-list select { min-width: 0; min-height: 36px; padding: 0 8px; border: 1px solid var(--line); background: transparent; color: var(--ink); font-size: 11px; }
-.user-management-list > div { display: grid; grid-template-columns: 1fr 1.4fr 120px 120px 76px; align-items: center; gap: 8px; padding: 12px 22px; border-bottom: 1px solid var(--line); }
+.user-management-list > div { display: grid; grid-template-columns: 1fr 1.3fr .9fr 1.1fr 100px 100px 76px; align-items: center; gap: 8px; padding: 12px 22px; border-bottom: 1px solid var(--line); }
 .user-management-list .icon-button { width: 32px; height: 32px; }
 .section-users > .admin-page-header, .section-users > .admin-panel:has(.user-table) { display: none; }
 .section-inbox > .admin-page-header, .section-inbox > .log-status-grid, .section-inbox > .operations-grid, .section-subscribers > .admin-page-header, .section-subscribers > .log-status-grid, .section-subscribers > .operations-grid { display: none; }
@@ -765,6 +766,7 @@ body::before { content: ''; position: fixed; z-index: 100; top: 0; left: 0; widt
 .settings-grid .public-copy-panel, .settings-grid .mail-panel { grid-column: 1 / -1; margin-top: 0; }
 .settings-help { margin: 20px 22px 0; color: var(--ink-soft); font-size: 13px; line-height: 1.7; }
 .settings-panel { padding-bottom: 24px; }
+.advanced-copy-panel { margin-top: 18px; }
 .settings-panel > label { display: grid; gap: 8px; margin: 20px 24px 0; color: var(--ink-soft); font: 500 9px/1 'IBM Plex Mono', monospace; }
 .settings-panel > label input, .settings-panel > label textarea, .settings-panel > label select { min-height: 40px; padding: 10px; border: 1px solid var(--line); background: transparent; color: var(--ink); outline: 0; font-size: 11px; resize: vertical; }
 .settings-panel .switch-label { display: flex; align-items: center; gap: 10px; color: var(--ink); font-size: 11px; }

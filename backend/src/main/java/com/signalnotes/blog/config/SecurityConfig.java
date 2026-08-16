@@ -4,10 +4,8 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.*;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
-import org.springframework.security.core.userdetails.*;
 import org.springframework.security.crypto.factory.PasswordEncoderFactories;
 import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.security.provisioning.InMemoryUserDetailsManager;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.web.cors.*;
@@ -23,16 +21,11 @@ public class SecurityConfig {
                 .contentSecurityPolicy(csp -> csp.policyDirectives("default-src 'self'; img-src 'self' data: blob:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; script-src 'self'; connect-src 'self' http://127.0.0.1:* http://localhost:*; object-src 'none'; base-uri 'self'; frame-ancestors 'none'"))
                 .permissionsPolicyHeader(policy -> policy.policy("camera=(), microphone=(), geolocation=()")))
             .authorizeHttpRequests(auth -> auth
+                .requestMatchers("/api/admin/users/**", "/api/admin/settings", "/api/admin/email/**", "/api/admin/logs/**", "/api/admin/backups/**").hasRole("ADMIN")
                 .requestMatchers("/api/admin/**").authenticated()
                 .requestMatchers("/actuator/health", "/api/**", "/uploads/**").permitAll()
                 .anyRequest().permitAll())
             .httpBasic(Customizer.withDefaults()).build();
-    }
-
-    @Bean
-    InMemoryUserDetailsManager users(@Value("${app.admin.username}") String username, @Value("${app.admin.password}") String password, PasswordEncoder encoder) {
-        UserDetails admin = User.withUsername(username).password(encoder.encode(password)).roles("ADMIN").build();
-        return new InMemoryUserDetailsManager(admin);
     }
 
     @Bean PasswordEncoder passwordEncoder() { return PasswordEncoderFactories.createDelegatingPasswordEncoder(); }

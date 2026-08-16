@@ -10,8 +10,10 @@ import SharePoster from '../components/SharePoster.vue';
 import { formatDate, getAuthor } from '../data';
 import { apiRequest, submitComment } from '../api';
 import { setArticleJsonLd, setPageSeo } from '../seo';
+import { useSite } from '../site';
 
 const route = useRoute();
+const { site, loadSite } = useSite();
 const post = ref(null);
 const comment = ref({ name: '', content: '' });
 const comments = ref([]);
@@ -22,7 +24,7 @@ const lightbox = ref({ open: false, src: '', alt: '' });
 const continueFrom = ref(0);
 const allPosts = ref([]);
 
-const author = computed(() => post.value?.authorName ? { ...getAuthor('lin'), name: post.value.authorName } : getAuthor(post.value?.authorId));
+const author = computed(() => ({ ...getAuthor(post.value?.authorId), name: post.value?.authorName || site.authorName, role: site.authorRole, bio: site.authorBio }));
 const article = computed(() => {
   if (!post.value) return { html: '', headings: [] };
   const headings = [];
@@ -40,6 +42,7 @@ const next = computed(() => currentIndex.value >= 0 ? allPosts.value[currentInde
 function orderComments(list){return list.filter(item=>!item.parentId).flatMap(parent=>[parent,...list.filter(item=>item.parentId===parent.id)]);}
 
 onMounted(async () => {
+  await loadSite().catch(() => {});
   try {
     const value = await apiRequest(`/posts/${route.params.slug}`);
     if (value) post.value = value;
@@ -47,7 +50,7 @@ onMounted(async () => {
     allPosts.value = Array.isArray(list) ? list : [];
   } catch (error) { commentStatus.value = error.message || '文章服务暂时不可用'; }
   if (post.value) {
-    setPageSeo({ title: `${post.value.title} | 脉冲笔记`, description: post.value.excerpt, canonical: new URL(`/blog/posts/${post.value.slug}`, window.location.origin).href, type: 'article' });
+    setPageSeo({ title: `${post.value.title} | ${site.siteName}`, description: post.value.excerpt, canonical: new URL(`/blog/posts/${post.value.slug}`, window.location.origin).href, type: 'article' });
     setArticleJsonLd(post.value);
     continueFrom.value = Number(localStorage.getItem(`signal-reading-${post.value.slug}`) || 0);
   }
@@ -58,7 +61,7 @@ onMounted(async () => {
 });
 
 onUnmounted(() => {
-  document.title = '脉冲笔记 | Signal Notes';
+  document.title = `${site.siteName} | ${site.siteShortName}`;
   document.getElementById('signal-article-jsonld')?.remove();
   window.removeEventListener('scroll', progress);
   document.documentElement.style.removeProperty('--reading-progress');

@@ -20,7 +20,7 @@ public class BackupService {
             Files.createDirectories(directory);
             String filename = "signal-notes-" + Instant.now().toEpochMilli() + ".json";
             BackupJob job = new BackupJob(); job.setFilename(filename); job = jobs.save(job);
-            Map<String,Object> payload = new LinkedHashMap<>(); payload.put("formatVersion",1); payload.put("createdAt",Instant.now()); payload.put("posts",posts.all()); payload.put("comments",comments.findAll()); payload.put("settings",settings.findAll());
+            Map<String,Object> payload = new LinkedHashMap<>(); payload.put("formatVersion",1); payload.put("createdAt",Instant.now()); payload.put("posts",posts.all()); payload.put("comments",comments.findAll()); payload.put("settings",settings.findAll().stream().filter(item -> !"mail.password".equals(item.getKey())).toList());
             byte[] bytes = json.writerWithDefaultPrettyPrinter().writeValueAsBytes(payload); Path target = directory.resolve(filename).normalize(); if(!target.startsWith(directory))throw new IllegalStateException("非法备份路径"); Files.write(target,bytes,StandardOpenOption.CREATE_NEW);
             job.setSize((long)bytes.length); job.setChecksum(hex(MessageDigest.getInstance("SHA-256").digest(bytes))); job.setVerified(Arrays.equals(MessageDigest.getInstance("SHA-256").digest(Files.readAllBytes(target)),MessageDigest.getInstance("SHA-256").digest(bytes))); job.setStatus(job.isVerified()?"VERIFIED":"FAILED"); job.setVerifiedAt(job.isVerified()?Instant.now():null); return jobs.save(job);
         } catch (Exception error) { throw new IllegalStateException("备份失败：" + error.getMessage(), error); }

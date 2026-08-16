@@ -8,6 +8,8 @@ import jakarta.mail.internet.MimeMessage;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.mail.javamail.JavaMailSenderImpl;
 import org.springframework.mail.javamail.MimeMessageHelper;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import java.util.Map;
@@ -15,6 +17,7 @@ import java.util.Properties;
 
 @Service
 public class NotificationMailService {
+    private static final Logger log = LoggerFactory.getLogger(NotificationMailService.class);
     private final SettingRepository settings;
     private final String publicUrl;
 
@@ -69,6 +72,7 @@ public class NotificationMailService {
             sender.send(message);
             return true;
         } catch (MessagingException | RuntimeException error) {
+            log.error("SMTP delivery failed for recipient {}: {}", recipient, error.getMessage(), error);
             return false;
         }
     }

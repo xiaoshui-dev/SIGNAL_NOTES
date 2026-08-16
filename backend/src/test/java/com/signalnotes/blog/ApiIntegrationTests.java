@@ -9,10 +9,10 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.mock.web.MockMultipartFile;
-import org.springframework.security.core.userdetails.User;
 import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.security.provisioning.InMemoryUserDetailsManager;
 import java.time.LocalDate;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
@@ -26,7 +26,7 @@ class ApiIntegrationTests {
     @Autowired ContactMessageRepository contactMessages;
     @Autowired UserRepository siteUsers;
     @Autowired SettingRepository settings;
-    @Autowired InMemoryUserDetailsManager userDetails;
+    @Autowired com.signalnotes.blog.service.DatabaseUserDetailsService userDetails;
     @Autowired PasswordEncoder passwordEncoder;
 
     @BeforeEach void seed() {
@@ -71,8 +71,7 @@ class ApiIntegrationTests {
             mvc.perform(get("/api/admin/dashboard").with(oldAuth)).andExpect(status().isUnauthorized());
             mvc.perform(get("/api/admin/dashboard").with(newAuth)).andExpect(status().isOk());
         } finally {
-            var current=userDetails.loadUserByUsername("admin");
-            userDetails.updateUser(User.withUserDetails(current).password(passwordEncoder.encode("signal2026")).build());
+            userDetails.changePassword("admin", passwordEncoder.encode("signal2026"));
         }
     }
 
@@ -115,7 +114,14 @@ class ApiIntegrationTests {
             .andExpect(status().isOk());
         mvc.perform(get("/api/categories")).andExpect(status().isOk()).andExpect(jsonPath("$[0].name").value("系统设计"));
         mvc.perform(get("/api/tags")).andExpect(status().isOk()).andExpect(jsonPath("$").isArray());
-        mvc.perform(get("/api/site")).andExpect(status().isOk()).andExpect(jsonPath("$.heroTitle").value("数据库里的标题"));
+        mvc.perform(get("/api/site")).andExpect(status().isOk())
+            .andExpect(jsonPath("$.heroTitle").value("数据库里的标题"))
+            .andExpect(jsonPath("$.searchTitle").isNotEmpty())
+            .andExpect(jsonPath("$.searchIntro").isNotEmpty())
+            .andExpect(jsonPath("$.categoriesTitle").isNotEmpty())
+            .andExpect(jsonPath("$.categoriesIntro").isNotEmpty())
+            .andExpect(jsonPath("$.aboutPrinciple1Title").isNotEmpty())
+            .andExpect(jsonPath("$.aboutPrinciple1Body").isNotEmpty());
     }
 
     @Test void trashedPostCanBeRestoredAndPermanentlyDeleted() throws Exception {
@@ -149,16 +155,53 @@ class ApiIntegrationTests {
         String body = mvc.perform(post("/api/admin/users").with(auth).contentType(MediaType.APPLICATION_JSON).content("{\"name\":\"新作者\",\"email\":\"new-author@example.com\",\"role\":\"AUTHOR\"}"))
             .andExpect(status().isCreated()).andExpect(jsonPath("$.status").value("INVITED")).andReturn().getResponse().getContentAsString();
         Long id = com.fasterxml.jackson.databind.json.JsonMapper.builder().build().readTree(body).get("id").longValue();
-        mvc.perform(put("/api/admin/users/{id}", id).with(auth).contentType(MediaType.APPLICATION_JSON).content("{\"name\":\"新作者 2\",\"role\":\"EDITOR\",\"status\":\"ACTIVE\"}"))
+        mvc.perform(put("/api/admin/users/{id}", id).with(auth).contentType(MediaType.APPLICATION_JSON).content("{\"name\":\"新作者 2\",\"loginName\":\"new-author\",\"password\":\"author-password-123\",\"role\":\"EDITOR\",\"status\":\"ACTIVE\"}"))
             .andExpect(status().isOk()).andExpect(jsonPath("$.role").value("EDITOR"));
         mvc.perform(delete("/api/admin/users/{id}", id).with(auth)).andExpect(status().isNoContent());
     }
 
+    @Test void managedActiveUserCanAuthenticateWithDatabaseCredentials() throws Exception {
+        var admin = org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.httpBasic("admin", "signal2026");
+        mvc.perform(post("/api/admin/users").with(admin).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"name\":\"内容编辑\",\"email\":\"writer@example.com\",\"loginName\":\"writer\",\"password\":\"writer-password-123\",\"role\":\"EDITOR\",\"status\":\"ACTIVE\"}"))
+            .andExpect(status().isCreated()).andExpect(jsonPath("$.loginName").value("writer"));
+        var writer = org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.httpBasic("writer", "writer-password-123");
+        mvc.perform(get("/api/admin/dashboard").with(writer)).andExpect(status().isOk());
+        mvc.perform(get("/api/admin/me").with(writer)).andExpect(status().isOk()).andExpect(jsonPath("$.role").value("EDITOR"));
+        mvc.perform(get("/api/admin/settings").with(writer)).andExpect(status().isForbidden());
+        Long id = siteUsers.findAll().stream().filter(item -> "writer".equals(item.getLoginName())).findFirst().orElseThrow().getId();
+        mvc.perform(put("/api/admin/users/{id}", id).with(admin).contentType(MediaType.APPLICATION_JSON).content("{\"status\":\"DISABLED\"}"))
+            .andExpect(status().isOk());
+        mvc.perform(get("/api/admin/dashboard").with(writer)).andExpect(status().isUnauthorized());
+    }
+
+    @Test void smtpPasswordIsMaskedAndBlankUpdatesPreserveTheStoredSecret() throws Exception {
+        var admin = org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.httpBasic("admin", "signal2026");
+        SiteSetting password = new SiteSetting();
+        password.setKey("mail.password");
+        password.setValue("smtp-secret-value");
+        settings.save(password);
+        mvc.perform(get("/api/admin/settings").with(admin))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$['mail.password']").value(""))
+            .andExpect(jsonPath("$['mail.passwordConfigured']").value("true"));
+        mvc.perform(put("/api/admin/settings").with(admin).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"mail.password\":\"\",\"siteName\":\"保留密码测试\"}"))
+            .andExpect(status().isOk()).andExpect(jsonPath("$['mail.password']").value(""));
+        Assertions.assertEquals("smtp-secret-value", settings.findById("mail.password").orElseThrow().getValue());
+    }
+
     @Test void backupCreatesVerifiedArtifactVisibleInTaskList() throws Exception {
         var auth = org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.httpBasic("admin", "signal2026");
+        SiteSetting password = new SiteSetting();
+        password.setKey("mail.password");
+        password.setValue("backup-secret-value");
+        settings.save(password);
         mvc.perform(post("/api/admin/backups").with(auth)).andExpect(status().isOk())
             .andExpect(jsonPath("$.verified").value(true)).andExpect(jsonPath("$.checksum").isString());
-        mvc.perform(get("/api/admin/backups").with(auth)).andExpect(status().isOk())
-            .andExpect(jsonPath("$[0].status").value("VERIFIED"));
+        String filename = mvc.perform(get("/api/admin/backups").with(auth)).andExpect(status().isOk())
+            .andExpect(jsonPath("$[0].status").value("VERIFIED")).andReturn().getResponse().getContentAsString();
+        String latest = com.fasterxml.jackson.databind.json.JsonMapper.builder().build().readTree(filename).get(0).get("filename").asText();
+        Assertions.assertFalse(Files.readString(Path.of("target/test-backups", latest)).contains("backup-secret-value"));
     }
 }
