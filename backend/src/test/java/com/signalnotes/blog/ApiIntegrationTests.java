@@ -26,11 +26,12 @@ class ApiIntegrationTests {
     @Autowired ContactMessageRepository contactMessages;
     @Autowired UserRepository siteUsers;
     @Autowired SettingRepository settings;
+    @Autowired MediaRepository mediaAssets;
     @Autowired com.signalnotes.blog.service.DatabaseUserDetailsService userDetails;
     @Autowired PasswordEncoder passwordEncoder;
 
     @BeforeEach void seed() {
-        comments.deleteAll(); posts.deleteAll(); categories.deleteAll();
+        comments.deleteAll(); posts.deleteAll(); categories.deleteAll(); mediaAssets.deleteAll();
         Category category = new Category(); category.setName("系统设计"); category.setSlug("system-design"); category.setDescription("测试分类"); category = categories.save(category);
         Post post = new Post(); post.setSlug("test-post"); post.setTitle("测试文章"); post.setExcerpt("测试摘要"); post.setContent("## 正文"); post.setCategory(category); post.setStatus(PostStatus.PUBLISHED); post.setPublishedAt(LocalDate.now()); posts.save(post);
     }
@@ -54,12 +55,31 @@ class ApiIntegrationTests {
         var auth = org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.httpBasic("admin", "signal2026");
         MockMultipartFile file = new MockMultipartFile("file", "cover.png", "image/png", new byte[]{(byte)0x89,0x50,0x4e,0x47,0x0d,0x0a,0x1a,0x0a,1,2,3,4});
         String response = mvc.perform(multipart("/api/admin/media").file(file).param("altText", "原始替代文本").with(auth)).andExpect(status().isCreated()).andReturn().getResponse().getContentAsString();
-        Long id = com.fasterxml.jackson.databind.json.JsonMapper.builder().build().readTree(response).get("id").longValue();
+        var json = com.fasterxml.jackson.databind.json.JsonMapper.builder().build().readTree(response);
+        Long id = json.get("id").longValue();
+        String url = json.get("url").asText();
         mvc.perform(patch("/api/admin/media/{id}", id).with(auth).contentType(MediaType.APPLICATION_JSON).content("{\"filename\":\"updated.png\",\"altText\":\"更新后的替代文本\"}"))
             .andExpect(status().isOk()).andExpect(jsonPath("$.filename").value("updated.png"));
+        MockMultipartFile replacement = new MockMultipartFile("file", "replacement.png", "image/png", new byte[]{(byte)0x89,0x50,0x4e,0x47,0x0d,0x0a,0x1a,0x0a,5,6,7,8,9});
+        mvc.perform(multipart("/api/admin/media/{id}/replace", id).file(replacement).with(auth))
+            .andExpect(status().isOk()).andExpect(jsonPath("$.filename").value("replacement.png"))
+            .andExpect(jsonPath("$.url").value(url));
         MockMultipartFile fake = new MockMultipartFile("file", "fake.png", "image/png", new byte[]{1,2,3});
         mvc.perform(multipart("/api/admin/media").file(fake).with(auth)).andExpect(status().isBadRequest());
+        Post post = posts.findBySlug("test-post").orElseThrow();
+        post.setCover(url);
+        posts.saveAndFlush(post);
+        mvc.perform(get("/api/media")).andExpect(status().isOk())
+            .andExpect(jsonPath("$[0].referenceCount").value(1))
+            .andExpect(jsonPath("$[0].deletable").value(false));
+        mvc.perform(delete("/api/admin/media/{id}", id).with(auth)).andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.message").value(org.hamcrest.Matchers.containsString("1 篇文章")));
+        post.setCover(null);
+        posts.saveAndFlush(post);
+        Path storedFile = Path.of("target/test-uploads", url.substring("/uploads/".length()));
+        Assertions.assertTrue(Files.exists(storedFile));
         mvc.perform(delete("/api/admin/media/{id}", id).with(auth)).andExpect(status().isNoContent());
+        Assertions.assertFalse(Files.exists(storedFile));
     }
 
     @Test void adminCanChangePasswordAndOldPasswordStopsWorking() throws Exception {

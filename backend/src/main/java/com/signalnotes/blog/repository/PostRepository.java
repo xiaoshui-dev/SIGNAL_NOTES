@@ -9,6 +9,7 @@ public interface PostRepository extends JpaRepository<Post, Long> {
     Optional<Post> findBySlug(String slug);
     boolean existsBySlugAndIdNot(String slug, Long id);
     long countByStatus(PostStatus status);
+    long countByCover(String cover);
     List<Post> findByStatusAndScheduledAtBefore(PostStatus status, java.time.Instant now);
     List<Post> findTop5ByStatusOrderByViewsDesc(PostStatus status);
     @Query("""

@@ -150,6 +150,15 @@ Describe 'Signal Notes launcher files' {
         $blogView | Should Match 'TAG INDEX / 008'
     }
 
+    It 'makes destructive article and media actions explicit' {
+        $adminView = Get-Content -Raw (Join-Path $projectRoot 'frontend/src/views/AdminView.vue')
+        $adminView | Should Match '永久删除文章.*post\.title'
+        $adminView | Should Match 'replaceMedia\(item, \$event\)'
+        $adminView | Should Match 'item\.referenceCount'
+        $adminView | Should Match ':disabled="!item\.deletable"'
+        $adminView | Should Match 'mediaPreviewUrl\(item\)'
+    }
+
     It 'records the actual service listener processes after startup' {
         $startScript = Get-Content -Raw (Join-Path $projectRoot 'start-blog.ps1')
         $startScript | Should Match 'Write-BlogListenerProcessRecord -Path \$backendPidPath'
