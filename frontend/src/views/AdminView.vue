@@ -4,10 +4,11 @@ import {
   FolderTree, Hash, History, Image as ImageIcon, Inbox, LayoutDashboard, LogOut, Mail, Menu,
   Plus, RefreshCw, Save, Search, Settings, ShieldCheck, Trash2, Upload, Users, X,
 } from 'lucide-vue-next';
-import { computed, nextTick, onMounted, reactive, ref, watch } from 'vue';
+import { computed, nextTick, onMounted, onUnmounted, reactive, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { adminRequest, apiRequest, createAdminToken } from '../api';
 import { adminAccessForRole, canAccessAdminRoute } from '../adminAccess';
+import { createEditorAutosave } from '../editorAutosave';
 import { applySite, site as publicSite } from '../site';
 import AdminAdvancedCopy from '../components/AdminAdvancedCopy.vue';
 
@@ -159,7 +160,7 @@ function logout() { authed.value = false; localStorage.removeItem('signal-admin-
 async function savePost(status = editor.value.status, silent = false) {
   if (saving.value) return;
   saving.value = true;
-  clearTimeout(autosaveTimer);
+  autosave.cancel();
   const value = { ...editor.value, status, publishedAt: status === 'PUBLISHED' ? (editor.value.publishedAt || new Date().toISOString().slice(0, 10)) : editor.value.publishedAt || null, tags: Array.isArray(editor.value.tags) ? editor.value.tags : String(editor.value.tags || '').split(',').map((tag) => tag.trim()).filter(Boolean) };
   const payload = { slug: value.slug || value.title.toLowerCase().replace(/\s+/g, '-'), title: value.title, excerpt: value.excerpt || '', content: value.content || '', cover: value.cover, coverAlt: value.coverAlt, category: value.category, tags: value.tags, status, authorName: value.authorName || '林默', publishedAt: value.publishedAt, readMinutes: Number(value.readMinutes) || 5, scheduledAt: value.scheduledAt || null, seoTitle: value.seoTitle || value.title, seoDescription: value.seoDescription || value.excerpt, canonicalUrl: value.canonicalUrl || null, pinned: Boolean(value.pinned) };
   try {
@@ -176,14 +177,20 @@ async function savePost(status = editor.value.status, silent = false) {
   } catch (error) { apiStatus.value = '后端未连接'; flashError(error.message || '保存失败，请检查后端服务'); }
   finally { autosaveSuppressed = false; saving.value = false; }
 }
-let autosaveTimer;
+const autosave = createEditorAutosave();
 let autosaveSuppressed = false;
 watch(editor, () => {
   if (saving.value || autosaveSuppressed || !editorReady.value || !editorMode.value || !editor.value.title?.trim()) return;
-  clearTimeout(autosaveTimer); flash('有未保存修改', 'info'); autosaveTimer = setTimeout(() => savePost('DRAFT', true), 1200);
+  const editorId = String(editor.value.id ?? 'new');
+  flash('有未保存修改', 'info');
+  autosave.schedule(editorId, () => {
+    if (!editorMode.value || String(editor.value.id ?? 'new') !== editorId) return;
+    return savePost('DRAFT', true);
+  });
 }, { deep: true });
-watch(() => route.path, () => { menuOpen.value = false; syncEditor(); if (editorMode.value) loadRevisions(); }, { immediate: true });
+watch(() => route.path, () => { autosave.cancel(); menuOpen.value = false; syncEditor(); if (editorMode.value) loadRevisions(); }, { immediate: true });
 onMounted(() => { if (authed.value) loadAdminData(); });
+onUnmounted(() => autosave.cancel());
 
 async function deletePost(post) { const permanent = post.status === 'TRASHED'; if (!confirm(permanent ? `永久删除文章“${post.title}”后无法恢复，确定继续吗？` : `确定将文章“${post.title}”移入回收站吗？`)) return; try { await adminRequest(`/admin/posts/${post.id}${permanent ? '?permanent=true' : ''}`, { method: 'DELETE' }); if (permanent) adminPosts.value = adminPosts.value.filter((item) => item.id !== post.id); else post.status = 'TRASHED'; flash(permanent ? '文章已永久删除' : '文章已移入回收站'); } catch (error) { flashError(error.message || '文章删除失败'); } }
 async function restorePost(post) { try { Object.assign(post, await adminRequest(`/admin/posts/${post.id}/restore`, { method: 'POST' })); flash('文章已恢复为草稿'); } catch (error) { flashError(error.message || '文章恢复失败'); } }
