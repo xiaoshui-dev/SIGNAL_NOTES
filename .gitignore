@@ -9,5 +9,6 @@ backend/backups/
 .vscode/
 *.log
 .runtime/
+.superpowers/
 .DS_Store
 Thumbs.db
