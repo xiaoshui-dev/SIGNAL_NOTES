@@ -25,18 +25,20 @@ class ApiIntegrationTests {
     @Autowired MockMvc mvc;
     @Autowired PostRepository posts;
     @Autowired CategoryRepository categories;
+    @Autowired TagRepository tags;
     @Autowired CommentRepository comments;
     @Autowired SubscriptionRepository subscriptions;
     @Autowired ContactMessageRepository contactMessages;
     @Autowired UserRepository siteUsers;
     @Autowired SettingRepository settings;
+    @Autowired AuditLogRepository auditLogs;
     @Autowired org.springframework.jdbc.core.JdbcTemplate jdbc;
     @Autowired MediaRepository mediaAssets;
     @Autowired com.signalnotes.blog.service.DatabaseUserDetailsService userDetails;
     @Autowired PasswordEncoder passwordEncoder;
 
     @BeforeEach void seed() {
-        comments.deleteAll(); posts.deleteAll(); categories.deleteAll(); mediaAssets.deleteAll();
+        comments.deleteAll(); posts.deleteAll(); categories.deleteAll(); tags.deleteAll(); mediaAssets.deleteAll();
         Category category = new Category(); category.setName("系统设计"); category.setSlug("system-design"); category.setDescription("测试分类"); category = categories.save(category);
         Post post = new Post(); post.setSlug("test-post"); post.setTitle("测试文章"); post.setExcerpt("测试摘要"); post.setContent("## 正文"); post.setCategory(category); post.setStatus(PostStatus.PUBLISHED); post.setPublishedAt(LocalDate.now()); posts.save(post);
     }
@@ -206,6 +208,28 @@ class ApiIntegrationTests {
         mvc.perform(get("/api/admin/categories").with(auth)).andExpect(status().isOk());
         Long postId = posts.findBySlug("test-post").orElseThrow().getId();
         mvc.perform(get("/api/admin/posts/{id}/revisions", postId).with(auth)).andExpect(status().isOk());
+    }
+
+    @Test void tagRenameRejectsConflictsWithoutChangingPostsOrAuditLogs() throws Exception {
+        com.signalnotes.blog.domain.Tag original = new com.signalnotes.blog.domain.Tag(); original.setName("旧标签"); original.setSlug("old-tag"); original = tags.save(original);
+        com.signalnotes.blog.domain.Tag conflict = new com.signalnotes.blog.domain.Tag(); conflict.setName("占用标签"); conflict.setSlug("reserved-slug"); tags.save(conflict);
+        Post post = posts.findBySlug("test-post").orElseThrow();
+        post.getTags().add("旧标签");
+        posts.saveAndFlush(post);
+        long auditCount = auditLogs.findAll().stream().filter(item -> "UPDATE_TAG".equals(item.getAction())).count();
+        var auth = org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.httpBasic("admin", "signal2026");
+
+        mvc.perform(put("/api/admin/tags/{id}", original.getId()).with(auth).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"name\":\"新标签\",\"slug\":\"reserved-slug\",\"description\":\"不应保存\"}"))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.message").value("标签 slug 已存在"));
+
+        com.signalnotes.blog.domain.Tag unchanged = tags.findById(original.getId()).orElseThrow();
+        Assertions.assertEquals("旧标签", unchanged.getName());
+        Assertions.assertEquals("old-tag", unchanged.getSlug());
+        Assertions.assertTrue(posts.findBySlug("test-post").orElseThrow().getTags().contains("旧标签"));
+        Assertions.assertFalse(posts.findBySlug("test-post").orElseThrow().getTags().contains("新标签"));
+        Assertions.assertEquals(auditCount, auditLogs.findAll().stream().filter(item -> "UPDATE_TAG".equals(item.getAction())).count());
     }
 
     @Test void publicTaxonomyAndSiteSettingsComeFromTheDatabase() throws Exception {
