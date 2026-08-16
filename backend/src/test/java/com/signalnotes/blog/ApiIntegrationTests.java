@@ -175,6 +175,32 @@ class ApiIntegrationTests {
             .andExpect(status().isBadRequest());
     }
 
+    @Test void contactIdempotencyKeyDeduplicatesOnlyExactRetries() throws Exception {
+        long before = contactMessages.count();
+        String payload = """
+            {"name":"重复反馈者","email":"idempotency@example.com","subject":"重复问题","message":"相同内容可能在不同时间合法提交","consent":true}
+            """;
+
+        String first = mvc.perform(post("/api/contact").header("Idempotency-Key", "contact-attempt-1")
+                .contentType(MediaType.APPLICATION_JSON).content(payload))
+            .andExpect(status().isCreated()).andReturn().getResponse().getContentAsString();
+        String retry = mvc.perform(post("/api/contact").header("Idempotency-Key", "contact-attempt-1")
+                .contentType(MediaType.APPLICATION_JSON).content(payload))
+            .andExpect(status().isCreated()).andReturn().getResponse().getContentAsString();
+        String newAttempt = mvc.perform(post("/api/contact").header("Idempotency-Key", "contact-attempt-2")
+                .contentType(MediaType.APPLICATION_JSON).content(payload))
+            .andExpect(status().isCreated()).andReturn().getResponse().getContentAsString();
+        mvc.perform(post("/api/contact").contentType(MediaType.APPLICATION_JSON).content(payload))
+            .andExpect(status().isCreated());
+        mvc.perform(post("/api/contact").contentType(MediaType.APPLICATION_JSON).content(payload))
+            .andExpect(status().isCreated());
+
+        var mapper = com.fasterxml.jackson.databind.json.JsonMapper.builder().build();
+        Assertions.assertEquals(mapper.readTree(first).get("ticket").asText(), mapper.readTree(retry).get("ticket").asText());
+        Assertions.assertNotEquals(mapper.readTree(first).get("ticket").asText(), mapper.readTree(newAttempt).get("ticket").asText());
+        Assertions.assertEquals(before + 4, contactMessages.count());
+    }
+
     @Test void adminCanListTaxonomyAndPostRevisions() throws Exception {
         var auth = org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.httpBasic("admin", "signal2026");
         mvc.perform(get("/api/admin/categories").with(auth)).andExpect(status().isOk());

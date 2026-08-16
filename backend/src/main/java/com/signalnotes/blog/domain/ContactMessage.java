@@ -2,6 +2,7 @@ package com.signalnotes.blog.domain;
 
 import jakarta.persistence.*;
 import jakarta.validation.constraints.*;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.*;
 import java.time.Instant;
 
@@ -16,5 +17,6 @@ public class ContactMessage {
     @Column(nullable = false, length = 30) private String status = "RECEIVED";
     @Column(nullable = false, unique = true, length = 40) private String ticket;
     @Column(nullable = false) private boolean consent;
+    @JsonIgnore @Column(name = "idempotency_key", unique = true, length = 100) private String idempotencyKey;
     @Column(name = "created_at", nullable = false, updatable = false) private Instant createdAt = Instant.now();
 }
