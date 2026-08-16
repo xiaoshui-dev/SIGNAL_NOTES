@@ -10,9 +10,12 @@ import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDate;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.List;
+import java.util.Properties;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
@@ -209,6 +212,121 @@ class ApiIntegrationTests {
                 .content("{\"mail.password\":\"\",\"siteName\":\"保留密码测试\"}"))
             .andExpect(status().isOk()).andExpect(jsonPath("$['mail.password']").value(""));
         Assertions.assertEquals("smtp-secret-value", settings.findById("mail.password").orElseThrow().getValue());
+    }
+
+    @Test void smtpSettingsAreValidatedAndFailedNotificationsStayInTheInbox() throws Exception {
+        var admin = org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.httpBasic("admin", "signal2026");
+        try {
+            mvc.perform(put("/api/admin/settings").with(admin).contentType(MediaType.APPLICATION_JSON)
+                    .content("{\"mail.enabled\":\"false\"}"))
+                .andExpect(status().isOk());
+            mvc.perform(post("/api/admin/email/test").with(admin).contentType(MediaType.APPLICATION_JSON).content("{\"to\":\"not-an-email\"}"))
+                .andExpect(status().isBadRequest()).andExpect(jsonPath("$.message").value(org.hamcrest.Matchers.containsString("有效的测试邮箱")));
+            mvc.perform(post("/api/admin/email/test").with(admin).contentType(MediaType.APPLICATION_JSON).content("{\"to\":\"owner@example.com\"}"))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.configured").value(false))
+                .andExpect(jsonPath("$.sent").value(false)).andExpect(jsonPath("$.message").value(org.hamcrest.Matchers.containsString("尚未配置")));
+            mvc.perform(put("/api/admin/settings").with(admin).contentType(MediaType.APPLICATION_JSON)
+                    .content("{\"mail.enabled\":\"sometimes\"}"))
+                .andExpect(status().isBadRequest()).andExpect(jsonPath("$.message").value(org.hamcrest.Matchers.containsString("启用状态")));
+            mvc.perform(put("/api/admin/settings").with(admin).contentType(MediaType.APPLICATION_JSON)
+                    .content("{\"mail.enabled\":\"true\",\"mail.host\":\"\",\"mail.port\":\"587\",\"mail.from\":\"owner@example.com\",\"mail.notificationTo\":\"owner@example.com\",\"mail.auth\":\"false\",\"mail.starttls\":\"true\"}"))
+                .andExpect(status().isBadRequest()).andExpect(jsonPath("$.message").value(org.hamcrest.Matchers.containsString("SMTP 主机")));
+            mvc.perform(put("/api/admin/settings").with(admin).contentType(MediaType.APPLICATION_JSON)
+                    .content("{\"mail.enabled\":\"true\",\"mail.host\":\"smtp.example.com\",\"mail.port\":\"70000\",\"mail.from\":\"owner@example.com\",\"mail.notificationTo\":\"owner@example.com\",\"mail.auth\":\"false\",\"mail.starttls\":\"true\"}"))
+                .andExpect(status().isBadRequest()).andExpect(jsonPath("$.message").value(org.hamcrest.Matchers.containsString("端口")));
+            mvc.perform(put("/api/admin/settings").with(admin).contentType(MediaType.APPLICATION_JSON)
+                    .content("{\"mail.enabled\":\"true\",\"mail.host\":\"smtp.example.com\",\"mail.port\":\"587\",\"mail.from\":\"invalid\",\"mail.notificationTo\":\"owner@example.com\",\"mail.auth\":\"false\",\"mail.starttls\":\"true\"}"))
+                .andExpect(status().isBadRequest()).andExpect(jsonPath("$.message").value(org.hamcrest.Matchers.containsString("发件人")));
+            mvc.perform(put("/api/admin/settings").with(admin).contentType(MediaType.APPLICATION_JSON)
+                    .content("{\"mail.enabled\":\"true\",\"mail.host\":\"smtp.example.com\",\"mail.port\":\"587\",\"mail.from\":\"owner@example.com\",\"mail.notificationTo\":\"invalid\",\"mail.auth\":\"false\",\"mail.starttls\":\"true\"}"))
+                .andExpect(status().isBadRequest()).andExpect(jsonPath("$.message").value(org.hamcrest.Matchers.containsString("反馈通知邮箱")));
+            mvc.perform(put("/api/admin/settings").with(admin).contentType(MediaType.APPLICATION_JSON)
+                    .content("{\"mail.enabled\":\"true\",\"mail.host\":\"smtp.example.com\",\"mail.port\":\"587\",\"mail.from\":\"owner@example.com\",\"mail.notificationTo\":\"owner@example.com\",\"mail.auth\":\"maybe\",\"mail.starttls\":\"true\"}"))
+                .andExpect(status().isBadRequest()).andExpect(jsonPath("$.message").value(org.hamcrest.Matchers.containsString("开关")));
+            mvc.perform(put("/api/admin/settings").with(admin).contentType(MediaType.APPLICATION_JSON)
+                    .content("{\"mail.enabled\":\"true\",\"mail.host\":\"smtp.example.com\",\"mail.port\":\"587\",\"mail.from\":\"owner@example.com\",\"mail.notificationTo\":\"owner@example.com\",\"mail.auth\":\"false\",\"mail.starttls\":\"maybe\"}"))
+                .andExpect(status().isBadRequest()).andExpect(jsonPath("$.message").value(org.hamcrest.Matchers.containsString("STARTTLS")));
+            mvc.perform(put("/api/admin/settings").with(admin).contentType(MediaType.APPLICATION_JSON)
+                    .content("{\"mail.enabled\":\"true\",\"mail.host\":\"smtp.example.com\",\"mail.port\":\"587\",\"mail.from\":\"owner@example.com\",\"mail.notificationTo\":\"owner@example.com\",\"mail.auth\":\"true\",\"mail.starttls\":\"true\",\"mail.username\":\"\"}"))
+                .andExpect(status().isBadRequest()).andExpect(jsonPath("$.message").value(org.hamcrest.Matchers.containsString("用户名和密码")));
+            mvc.perform(put("/api/admin/settings").with(admin).contentType(MediaType.APPLICATION_JSON)
+                    .content("{\"mail.enabled\":\"true\",\"mail.host\":\"127.0.0.1\",\"mail.port\":\"1\",\"mail.from\":\"owner@example.com\",\"mail.notificationTo\":\"owner@example.com\",\"mail.auth\":\"false\",\"mail.starttls\":\"false\"}"))
+                .andExpect(status().isOk());
+            mvc.perform(post("/api/subscriptions").contentType(MediaType.APPLICATION_JSON)
+                    .content("{\"email\":\"qa-task5-subscription@example.com\"}"))
+                .andExpect(status().isCreated()).andExpect(jsonPath("$.message").value(org.hamcrest.Matchers.containsString("发送失败")));
+            Assertions.assertTrue(subscriptions.findByEmailIgnoreCase("qa-task5-subscription@example.com").isPresent());
+            mvc.perform(post("/api/contact").contentType(MediaType.APPLICATION_JSON)
+                    .content("{\"name\":\"邮件失败读者\",\"email\":\"qa-task5-feedback@example.com\",\"subject\":\"邮件失败仍需入库\",\"message\":\"这条反馈必须保存在收件箱里，即使 SMTP 连接失败\",\"consent\":true}"))
+                .andExpect(status().isCreated()).andExpect(jsonPath("$.message").value(org.hamcrest.Matchers.containsString("发送失败")));
+            Assertions.assertTrue(contactMessages.findAll().stream().anyMatch(item -> "qa-task5-feedback@example.com".equals(item.getEmail())));
+            mvc.perform(post("/api/admin/email/test").with(admin).contentType(MediaType.APPLICATION_JSON).content("{\"to\":\"owner@example.com\"}"))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.configured").value(true))
+                .andExpect(jsonPath("$.sent").value(false)).andExpect(jsonPath("$.message").value(org.hamcrest.Matchers.containsString("发送失败")));
+        } finally {
+            SiteSetting enabled = settings.findById("mail.enabled").orElseGet(SiteSetting::new);
+            enabled.setKey("mail.enabled");
+            enabled.setValue("false");
+            settings.save(enabled);
+        }
+    }
+
+    @Test void smtpSettingsAreNormalizedAndSavedTransactionally() throws Exception {
+        var admin = org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.httpBasic("admin", "signal2026");
+        try {
+            mvc.perform(put("/api/admin/settings").with(admin).contentType(MediaType.APPLICATION_JSON)
+                    .content("{\"mail.enabled\":\" TRUE \",\"mail.host\":\" smtp.example.com \",\"mail.port\":\" 587 \",\"mail.from\":\" sender@example.com \",\"mail.notificationTo\":\" owner@example.com \",\"mail.auth\":\" TRUE \",\"mail.starttls\":\" FALSE \",\"mail.username\":\" smtp-user \",\"mail.password\":\"  password with spaces  \"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$['mail.password']").value(""))
+                .andExpect(jsonPath("$['mail.passwordConfigured']").value("true"));
+            Assertions.assertEquals("true", settings.findById("mail.enabled").orElseThrow().getValue());
+            Assertions.assertEquals("smtp.example.com", settings.findById("mail.host").orElseThrow().getValue());
+            Assertions.assertEquals("587", settings.findById("mail.port").orElseThrow().getValue());
+            Assertions.assertEquals("sender@example.com", settings.findById("mail.from").orElseThrow().getValue());
+            Assertions.assertEquals("owner@example.com", settings.findById("mail.notificationTo").orElseThrow().getValue());
+            Assertions.assertEquals("true", settings.findById("mail.auth").orElseThrow().getValue());
+            Assertions.assertEquals("false", settings.findById("mail.starttls").orElseThrow().getValue());
+            Assertions.assertEquals("smtp-user", settings.findById("mail.username").orElseThrow().getValue());
+            Assertions.assertEquals("  password with spaces  ", settings.findById("mail.password").orElseThrow().getValue());
+            var method = com.signalnotes.blog.controller.AdminController.class.getDeclaredMethod("saveSettings", java.util.Map.class, org.springframework.security.core.Authentication.class);
+            Assertions.assertNotNull(method.getAnnotation(Transactional.class));
+        } finally {
+            SiteSetting enabled = settings.findById("mail.enabled").orElseGet(SiteSetting::new);
+            enabled.setKey("mail.enabled");
+            enabled.setValue("false");
+            settings.save(enabled);
+        }
+    }
+
+    @Test void smtpSendUsesOneConfigurationSnapshotAndFiniteTimeouts() {
+        SettingRepository repository = org.mockito.Mockito.mock(SettingRepository.class);
+        org.mockito.Mockito.when(repository.findAll()).thenReturn(List.of(
+            setting("mail.enabled", "true"), setting("mail.host", "smtp.example.com"), setting("mail.port", "587"),
+            setting("mail.from", "sender@example.com"), setting("mail.notificationTo", "owner@example.com"),
+            setting("mail.auth", "true"), setting("mail.starttls", "true"), setting("mail.username", "smtp-user"),
+            setting("mail.password", "password with spaces")
+        ));
+        var service = new com.signalnotes.blog.service.NotificationMailService(repository, "http://127.0.0.1:5174");
+        Properties properties = new Properties();
+        try (var ignored = org.mockito.Mockito.mockConstruction(org.springframework.mail.javamail.JavaMailSenderImpl.class,
+                (sender, context) -> {
+                    org.mockito.Mockito.when(sender.getJavaMailProperties()).thenReturn(properties);
+                    org.mockito.Mockito.when(sender.createMimeMessage()).thenReturn(new jakarta.mail.internet.MimeMessage(jakarta.mail.Session.getInstance(new Properties())));
+                })) {
+            Assertions.assertTrue(service.sendTest("reader@example.com"));
+        }
+        org.mockito.Mockito.verify(repository, org.mockito.Mockito.times(1)).findAll();
+        org.mockito.Mockito.verify(repository, org.mockito.Mockito.never()).findById(org.mockito.ArgumentMatchers.anyString());
+        Assertions.assertEquals("5000", properties.getProperty("mail.smtp.connectiontimeout"));
+        Assertions.assertEquals("5000", properties.getProperty("mail.smtp.timeout"));
+        Assertions.assertEquals("5000", properties.getProperty("mail.smtp.writetimeout"));
+    }
+
+    private SiteSetting setting(String key, String value) {
+        SiteSetting setting = new SiteSetting();
+        setting.setKey(key);
+        setting.setValue(value);
+        return setting;
     }
 
     @Test void backupCreatesVerifiedArtifactVisibleInTaskList() throws Exception {

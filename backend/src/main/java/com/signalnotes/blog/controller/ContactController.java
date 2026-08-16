@@ -24,6 +24,9 @@ public class ContactController {
         input.setId(null); input.setTicket("SN-" + LocalDate.now().toString().replace("-", "") + "-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase()); input.setStatus("RECEIVED");
         ContactMessage saved = messages.save(input);
         boolean notified = mail.sendContactNotification(saved);
-        return Map.of("ticket", saved.getTicket(), "status", saved.getStatus(), "message", notified ? "反馈已收到，我们会尽快回复" : "反馈已收到；邮件提醒尚未配置，管理员可在后台查看");
+        String message = notified ? "反馈已收到，我们会尽快回复"
+            : mail.isConfigured() && mail.hasNotificationRecipient() ? "反馈已收到；提醒邮件发送失败，管理员仍可在后台查看"
+            : "反馈已收到；邮件提醒尚未配置，管理员可在后台查看";
+        return Map.of("ticket", saved.getTicket(), "status", saved.getStatus(), "message", message);
     }
 }

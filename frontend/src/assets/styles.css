@@ -784,7 +784,17 @@ body::before { content: ''; position: fixed; z-index: 100; top: 0; left: 0; widt
 .share-setting-preview strong { max-width: 70%; font: 700 22px/1.3 'Noto Serif SC', serif; }
 .share-setting-preview small { max-width: 70%; color: rgba(255,255,255,.65); font-size: 10px; }
 .share-setting-preview i { position: absolute; right: 20px; bottom: 20px; width: 62px; height: 62px; display: grid; place-items: center; background: white; color: #111513; font: 500 9px/1 'IBM Plex Mono', monospace; font-style: normal; }
-.admin-success { display: flex; align-items: center; gap: 8px; padding: 11px 14px; margin: -18px 0 18px; background: rgba(98,178,57,.12); color: #39791d; font-size: 11px; }
+.admin-success, .admin-notice { display: flex; align-items: center; gap: 8px; padding: 11px 14px; margin: -18px 0 18px; background: rgba(98,178,57,.12); color: #39791d; font-size: 12px; }
+.admin-shell.has-error-notice .admin-success, .admin-notice.is-error { background: rgba(211,67,46,.1); color: #a72f20; }
+.admin-shell.has-info-notice .admin-success, .admin-notice.is-info { background: rgba(40,92,107,.1); color: #285c6b; }
+.admin-error-state { display: grid; justify-items: center; gap: 12px; color: #a72f20; }
+.admin-error-state p { margin: 0; }
+.mail-status { display: grid; gap: 5px; padding: 12px 14px; border-left: 3px solid #65706b; background: rgba(101,112,107,.08); color: var(--ink-soft); }
+.mail-status strong { color: var(--ink); font-size: 12px; }
+.mail-status span { font-size: 11px; line-height: 1.6; }
+.mail-status.is-ready { border-color: #39791d; background: rgba(98,178,57,.1); }
+.mail-status.is-error { border-color: #a72f20; background: rgba(211,67,46,.08); color: #84291d; }
+.mail-status.is-off { border-color: #65706b; }
 .log-status-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-bottom: 18px; }
 .log-status-grid > div { min-height: 145px; display: flex; flex-direction: column; gap: 10px; padding: 20px; border: 1px solid var(--line); }
 .log-status-grid > div > svg { color: #39791d; }

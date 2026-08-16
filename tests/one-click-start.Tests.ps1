@@ -159,6 +159,59 @@ Describe 'Signal Notes launcher files' {
         $adminView | Should Match 'mediaPreviewUrl\(item\)'
     }
 
+    It 'shows actionable communication states in the admin console' {
+        $adminView = Get-Content -Raw (Join-Path $projectRoot 'frontend/src/views/AdminView.vue')
+        $styles = Get-Content -Raw (Join-Path $projectRoot 'frontend/src/assets/styles.css')
+        $adminView | Should Match 'function navBadge\(path\)'
+        $adminView | Should Match 'adminLoading'
+        $adminView | Should Match 'adminLoadError'
+        $adminView | Should Match 'flashError'
+        $adminView | Should Match 'mailConfigurationState'
+        $adminView | Should Match 'mailConfigurationState\.label'
+        $adminView | Should Match 'mailConfigurationState\.detail'
+        $adminView | Should Match 'mailConfigurationState\.tone'
+        $styles | Should Match '\.admin-notice\.is-error'
+        $styles | Should Match '\.admin-error-state'
+        $styles | Should Match '\.mail-status\.is-ready'
+        $styles | Should Match '\.mail-status\.is-error'
+    }
+
+    It 'keeps communication notices and sanitized mail settings in sync' {
+        $adminView = Get-Content -Raw (Join-Path $projectRoot 'frontend/src/views/AdminView.vue')
+        $adminView | Should Match "async function loadAdminData\(\) \{\s+const settingsVersionAtLoad = settingsMutationVersion;\s+saved\.value = '';"
+        $adminView | Should Match "const savedSettings = await adminRequest\('/admin/settings'"
+        $adminView | Should Match 'settings\.value = \{ \.\.\.settings\.value, \.\.\.savedSettings \};'
+        $adminView | Should Match "const tone = result\.sent \? 'success' : result\.configured \? 'error' : 'info';"
+        $adminView | Should Match "flash\(result\.message \|\| '测试邮件已处理', tone\);"
+    }
+
+    It 'gates settings writes on a successful settings load' {
+        $adminView = Get-Content -Raw (Join-Path $projectRoot 'frontend/src/views/AdminView.vue')
+        $adminView | Should Match "async function saveSettings\(\) \{ if \(adminLoading\.value \|\| adminLoadError\.value\) return;"
+        $adminView | Should Match ':disabled="adminLoading \|\| Boolean\(adminLoadError\)( \|\| settingsSaving)?"'
+        $adminView | Should Match '正在加载站点设置'
+        $adminView | Should Match '站点设置加载失败'
+        $adminView | Should Match 'const settingsVersionAtLoad = settingsMutationVersion;'
+        $adminView | Should Match 'if \(settingsVersionAtLoad === settingsMutationVersion\) settings\.value ='
+        $adminView | Should Match 'settingsMutationVersion \+= 1;'
+    }
+
+    It 'guards concurrent communication updates and duplicate settings saves' {
+        $adminView = Get-Content -Raw (Join-Path $projectRoot 'frontend/src/views/AdminView.vue')
+        $adminView | Should Match 'const settingsSaving = ref\(false\)'
+        $adminView | Should Match 'if \(settingsSaving\.value\) return;'
+        $adminView | Should Match ':disabled="adminLoading \|\| Boolean\(adminLoadError\) \|\| settingsSaving"'
+        $adminView | Should Match 'settingsSaving \? .保存中'
+        $adminView | Should Match 'const contactUpdateGenerations = new Map\(\)'
+        $adminView | Should Match 'const subscriptionUpdateGenerations = new Map\(\)'
+        $adminView | Should Match 'const pendingContactUpdates = reactive\(new Set\(\)\)'
+        $adminView | Should Match 'const pendingSubscriptionUpdates = reactive\(new Set\(\)\)'
+        $adminView | Should Match 'contactUpdateGenerations\.get\(item\.id\) === generation'
+        $adminView | Should Match 'subscriptionUpdateGenerations\.get\(item\.id\) === generation'
+        $adminView | Should Match ':disabled="pendingContactUpdates\.has\(item\.id\)"'
+        $adminView | Should Match ':disabled="pendingSubscriptionUpdates\.has\(item\.id\)"'
+    }
+
     It 'records the actual service listener processes after startup' {
         $startScript = Get-Content -Raw (Join-Path $projectRoot 'start-blog.ps1')
         $startScript | Should Match 'Write-BlogListenerProcessRecord -Path \$backendPidPath'
