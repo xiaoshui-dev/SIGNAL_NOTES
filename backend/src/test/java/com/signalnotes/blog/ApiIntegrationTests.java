@@ -211,6 +211,27 @@ class ApiIntegrationTests {
         mvc.perform(get("/api/admin/posts/{id}/revisions", postId).with(auth)).andExpect(status().isOk());
     }
 
+    @Test void batchPublishingMakesADraftPublicAndAssignsItsFirstPublishedDate() throws Exception {
+        var auth = org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.httpBasic("admin", "signal2026");
+        Post post = posts.findBySlug("test-post").orElseThrow();
+        post.setStatus(PostStatus.DRAFT);
+        post.setPublishedAt(null);
+        posts.saveAndFlush(post);
+
+        mvc.perform(patch("/api/admin/posts/batch").with(auth).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"ids\":[" + post.getId() + "],\"status\":\"PUBLISHED\"}"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.updated").value(1));
+
+        mvc.perform(get("/api/posts"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$[0].slug").value("test-post"))
+            .andExpect(jsonPath("$[0].publishedAt").value(LocalDate.now().toString()));
+        mvc.perform(get("/api/categories"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$[?(@.slug == 'system-design')].count").value(org.hamcrest.Matchers.contains(1)));
+    }
+
     @Test void tagRenameRejectsConflictsWithoutChangingPostsOrAuditLogs() throws Exception {
         com.signalnotes.blog.domain.Tag original = new com.signalnotes.blog.domain.Tag(); original.setName("旧标签"); original.setSlug("old-tag"); original = tags.save(original);
         com.signalnotes.blog.domain.Tag conflict = new com.signalnotes.blog.domain.Tag(); conflict.setName("占用标签"); conflict.setSlug("reserved-slug"); tags.save(conflict);

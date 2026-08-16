@@ -8,7 +8,7 @@ import { computed, nextTick, onMounted, onUnmounted, reactive, ref, watch } from
 import { useRoute, useRouter } from 'vue-router';
 import { adminRequest, apiRequest, createAdminToken } from '../api';
 import { adminAccessForRole, canAccessAdminRoute } from '../adminAccess';
-import { createEditorAutosave } from '../editorAutosave';
+import { createEditorAutosave, statusForAutosave } from '../editorAutosave';
 import { runMailTest } from '../mailTest';
 import { applySite, site as publicSite } from '../site';
 import AdminAdvancedCopy from '../components/AdminAdvancedCopy.vue';
@@ -187,7 +187,7 @@ watch(editor, () => {
   flash('有未保存修改', 'info');
   autosave.schedule(editorId, () => {
     if (!editorMode.value || String(editor.value.id ?? 'new') !== editorId) return;
-    return savePost('DRAFT', true);
+    return savePost(statusForAutosave(editor.value.status), true);
   });
 }, { deep: true });
 watch(() => route.path, () => { autosave.cancel(); menuOpen.value = false; syncEditor(); if (editorMode.value) loadRevisions(); }, { immediate: true });

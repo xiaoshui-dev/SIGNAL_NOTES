@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { createEditorAutosave } from '../src/editorAutosave.js';
+import { createEditorAutosave, statusForAutosave } from '../src/editorAutosave.js';
 
 function fakeTimers() {
   const callbacks = [];
@@ -37,4 +37,9 @@ test('rescheduling invalidates the previous editor callback', async () => {
   await timers.callbacks[1]();
 
   assert.deepEqual(saved, ['post-2']);
+});
+
+test('autosave preserves the status of an already published post', () => {
+  assert.equal(statusForAutosave('PUBLISHED'), 'PUBLISHED');
+  assert.equal(statusForAutosave('DRAFT'), 'DRAFT');
 });

@@ -27,3 +27,7 @@ export function createEditorAutosave({
 
   return { cancel, schedule };
 }
+
+export function statusForAutosave(status) {
+  return status || 'DRAFT';
+}
