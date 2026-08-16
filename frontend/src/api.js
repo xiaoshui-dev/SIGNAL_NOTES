@@ -6,7 +6,19 @@ export async function apiRequest(path, options = {}) {
   const headers = { ...(options.headers || {}) };
   if (!(options.body instanceof FormData)) headers['Content-Type'] = headers['Content-Type'] || 'application/json';
   const response = await fetch(`${API_BASE}${path}`, { ...options, headers });
-  if (!response.ok) throw new Error(`API ${response.status}`);
+  if (!response.ok) {
+    let message = `请求失败（${response.status}）`;
+    try {
+      const payload = await response.json();
+      message = payload.message || payload.error || message;
+    } catch {
+      const text = await response.text().catch(() => '');
+      if (text.trim()) message = text.trim();
+    }
+    const error = new Error(message);
+    error.status = response.status;
+    throw error;
+  }
   return response.status === 204 ? null : response.json();
 }
 
@@ -21,6 +33,8 @@ export async function loadPosts(params = {}) {
   const query = new URLSearchParams(Object.entries(params).filter(([, value]) => value));
   return apiRequest(`/posts${query.toString() ? `?${query}` : ''}`);
 }
+export async function loadCategories() { return apiRequest('/categories'); }
+export async function loadTags() { return apiRequest('/tags'); }
 
 export async function submitComment(payload) { return apiRequest('/comments', { method: 'POST', body: JSON.stringify(payload) }); }
 export async function subscribe(email) { return apiRequest('/subscriptions', { method: 'POST', body: JSON.stringify({ email }) }); }

@@ -1,12 +1,25 @@
 <script setup>
 import { ArrowDown, ArrowRight, Menu, Moon, Search, Sun, X } from 'lucide-vue-next';
-import { ref } from 'vue';
+import { onMounted, ref } from 'vue';
 import BrandLogo from '../components/BrandLogo.vue';
 import { theme, toggleTheme } from '../theme';
-import { posts } from '../data';
+import { loadPosts } from '../api';
 
 const menuOpen = ref(false);
 const topics = [['01', '人工智能', '模型、产品与人机协作'], ['02', '软件工程', '架构、代码与团队实践'], ['03', '系统设计', '性能、可靠性与基础设施'], ['04', '数字生活', '工具、阅读与个人工作流']];
+const emptyPost = { slug: '', cover: '', coverAlt: '', category: '', readMinutes: 0, title: '暂无精选文章', excerpt: '' };
+const posts = ref([emptyPost, emptyPost, emptyPost]);
+const contentStatus = ref('正在加载精选文章');
+onMounted(async () => {
+  try {
+    const value = await loadPosts();
+    const published = Array.isArray(value) ? value.slice(0, 3) : [];
+    posts.value = [0, 1, 2].map((index) => published[index] || emptyPost);
+    contentStatus.value = published.length ? '' : '暂时还没有发布文章';
+  } catch (error) {
+    contentStatus.value = error.message || '内容服务暂时不可用';
+  }
+});
 </script>
 
 <template>

@@ -46,6 +46,21 @@ public class PostService {
 
     @Transactional public void delete(Long id) { Post post = posts.findById(id).orElseThrow(() -> new EntityNotFoundException("文章不存在")); post.setStatus(PostStatus.TRASHED); post.setDeletedAt(java.time.Instant.now()); post.setUpdatedAt(LocalDate.now()); posts.save(post); }
 
+    @Transactional public PostView restore(Long id) {
+        Post post = posts.findById(id).orElseThrow(() -> new EntityNotFoundException("文章不存在"));
+        if (post.getStatus() != PostStatus.TRASHED) throw new IllegalArgumentException("只有回收站文章可以恢复");
+        post.setStatus(PostStatus.DRAFT);
+        post.setDeletedAt(null);
+        post.setUpdatedAt(LocalDate.now());
+        return PostView.from(posts.save(post));
+    }
+
+    @Transactional public void permanentlyDelete(Long id) {
+        Post post = posts.findById(id).orElseThrow(() -> new EntityNotFoundException("文章不存在"));
+        if (post.getStatus() != PostStatus.TRASHED) throw new IllegalArgumentException("请先将文章移入回收站");
+        posts.delete(post);
+    }
+
     @Transactional(readOnly = true)
     public List<PostRevision> revisions(Long id) { if (!posts.existsById(id)) throw new EntityNotFoundException("文章不存在"); return revisions.findByPostIdOrderByVersionNoDesc(id); }
 

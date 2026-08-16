@@ -663,6 +663,15 @@ body::before { content: ''; position: fixed; z-index: 100; top: 0; left: 0; widt
 .post-admin-table .table-row > a small, .user-table .table-row > div small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--ink-soft); font-size: 9px; }
 .row-actions { display: flex; align-items: center; gap: 8px; }
 .row-actions a, .row-actions button { display: inline-grid; place-items: center; border: 0; background: transparent; color: var(--ink-soft); cursor: pointer; }
+.icon-button.danger { color: var(--signal); }
+.admin-quick-actions { margin-bottom: 18px; }
+.admin-quick-actions .panel-heading small { max-width: 360px; color: var(--ink-soft); font-size: 11px; line-height: 1.6; }
+.quick-action-list > div { min-height: 56px; display: grid; grid-template-columns: minmax(0, 1fr) auto auto; align-items: center; gap: 16px; padding: 0 22px; border-bottom: 1px solid var(--line); }
+.quick-action-list > div:last-of-type { border-bottom: 0; }
+.quick-action-list strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; }
+.quick-action-list > div > span:not(.quick-action-buttons) { color: var(--ink-soft); font: 500 9px/1 'IBM Plex Mono', monospace; }
+.quick-action-buttons { display: flex; align-items: center; gap: 6px; }
+.quick-action-buttons .icon-button { width: 32px; height: 32px; }
 .admin-empty { padding: 65px; color: var(--ink-soft); text-align: center; font-size: 12px; }
 .editor-page { width: min(1440px, calc(100% - 72px)); padding-top: 24px; }
 .editor-top { min-height: 58px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--line); }
