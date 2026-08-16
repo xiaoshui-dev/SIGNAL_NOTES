@@ -106,6 +106,94 @@ function Get-BlogFrontendCommand {
     throw 'npm was not found. Install Node.js (npm is included) and add it to PATH.'
 }
 
+function Get-BlogFrontendDependencyFingerprint {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$FrontendRoot
+    )
+
+    $files = @('package.json', 'package-lock.json')
+    $hashes = foreach ($file in $files) {
+        $path = Join-Path $FrontendRoot $file
+        if (Test-Path -LiteralPath $path) {
+            $stream = [IO.File]::OpenRead($path)
+            $sha256 = [Security.Cryptography.SHA256]::Create()
+            try {
+                [BitConverter]::ToString($sha256.ComputeHash($stream)).Replace('-', '')
+            } finally {
+                $sha256.Dispose()
+                $stream.Dispose()
+            }
+        } else {
+            "missing:$file"
+        }
+    }
+    return ($hashes -join ':')
+}
+
+function Test-BlogFrontendDependencies {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$FrontendRoot,
+        [string]$StatePath
+    )
+
+    $viteBinary = @(@(
+        (Join-Path $FrontendRoot 'node_modules/.bin/vite.cmd'),
+        (Join-Path $FrontendRoot 'node_modules/.bin/vite')
+    ) | Where-Object { Test-Path -LiteralPath $_ })
+    if ($viteBinary.Count -eq 0) {
+        return $false
+    }
+
+    if (-not [string]::IsNullOrWhiteSpace($StatePath)) {
+        if (-not (Test-Path -LiteralPath $StatePath)) {
+            return $false
+        }
+        $expected = Get-BlogFrontendDependencyFingerprint -FrontendRoot $FrontendRoot
+        $actual = (Get-Content -LiteralPath $StatePath -Raw).Trim()
+        if ($actual -ne $expected) {
+            return $false
+        }
+    }
+
+    return $true
+}
+
+function Get-BlogFrontendInstallCommand {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$NpmPath,
+        [Parameter(Mandatory = $true)]
+        [string]$FrontendRoot
+    )
+
+    if ([string]::IsNullOrWhiteSpace($NpmPath)) {
+        throw 'npm was not found. Install Node.js (npm is included) and add it to PATH.'
+    }
+    $mode = if (Test-Path -LiteralPath (Join-Path $FrontendRoot 'package-lock.json')) { 'ci' } else { 'install' }
+    return [pscustomobject]@{
+        FilePath = $NpmPath
+        ArgumentList = @($mode, '--no-audit', '--no-fund')
+        Mode = $mode
+    }
+}
+
+function Get-BlogFrontendValidationCommand {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$NpmPath
+    )
+
+    if ([string]::IsNullOrWhiteSpace($NpmPath)) {
+        throw 'npm was not found. Install Node.js (npm is included) and add it to PATH.'
+    }
+    return [pscustomobject]@{
+        FilePath = $NpmPath
+        ArgumentList = @('ls', '--depth=0', '--omit=optional')
+    }
+}
+
 function Invoke-BlogHttpProbe {
     param(
         [Parameter(Mandatory = $true)]

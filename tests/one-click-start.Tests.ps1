@@ -66,6 +66,48 @@ Describe 'Signal Notes one-click launcher helpers' {
         }
         $message | Should Match 'npm'
     }
+
+    It 'detects whether Vite dependencies exist in a clean frontend checkout' {
+        $frontend = Join-Path $env:TEMP "signal-notes-frontend-$([guid]::NewGuid().ToString('N'))"
+        try {
+            New-Item -ItemType Directory -Path $frontend | Out-Null
+            Test-BlogFrontendDependencies -FrontendRoot $frontend | Should Be $false
+            '{"name":"test"}' | Set-Content -LiteralPath (Join-Path $frontend 'package.json') -Encoding UTF8
+            '{"lockfileVersion":3}' | Set-Content -LiteralPath (Join-Path $frontend 'package-lock.json') -Encoding UTF8
+            $bin = Join-Path $frontend 'node_modules/.bin'
+            New-Item -ItemType Directory -Force -Path $bin | Out-Null
+            New-Item -ItemType File -Path (Join-Path $bin 'vite.cmd') | Out-Null
+            Test-BlogFrontendDependencies -FrontendRoot $frontend | Should Be $true
+
+            $state = Join-Path $frontend 'dependency-state.txt'
+            Test-BlogFrontendDependencies -FrontendRoot $frontend -StatePath $state | Should Be $false
+            Get-BlogFrontendDependencyFingerprint -FrontendRoot $frontend | Set-Content -LiteralPath $state -Encoding ASCII
+            Test-BlogFrontendDependencies -FrontendRoot $frontend -StatePath $state | Should Be $true
+            '{"name":"changed"}' | Set-Content -LiteralPath (Join-Path $frontend 'package.json') -Encoding UTF8
+            Test-BlogFrontendDependencies -FrontendRoot $frontend -StatePath $state | Should Be $false
+        } finally {
+            Remove-Item -LiteralPath $frontend -Recurse -Force -ErrorAction SilentlyContinue
+        }
+    }
+
+    It 'uses npm ci when a lockfile is available' {
+        $frontend = Join-Path $env:TEMP "signal-notes-lock-$([guid]::NewGuid().ToString('N'))"
+        try {
+            New-Item -ItemType Directory -Path $frontend | Out-Null
+            New-Item -ItemType File -Path (Join-Path $frontend 'package-lock.json') | Out-Null
+            $install = Get-BlogFrontendInstallCommand -NpmPath 'C:\tools\npm.cmd' -FrontendRoot $frontend
+            $install.FilePath | Should Be 'C:\tools\npm.cmd'
+            ($install.ArgumentList -join ' ') | Should Be 'ci --no-audit --no-fund'
+        } finally {
+            Remove-Item -LiteralPath $frontend -Recurse -Force -ErrorAction SilentlyContinue
+        }
+    }
+
+    It 'validates an existing dependency tree before reinstalling it' {
+        $validation = Get-BlogFrontendValidationCommand -NpmPath 'C:\tools\npm.cmd'
+        $validation.FilePath | Should Be 'C:\tools\npm.cmd'
+        ($validation.ArgumentList -join ' ') | Should Be 'ls --depth=0 --omit=optional'
+    }
 }
 
 Describe 'Signal Notes launcher files' {
@@ -111,6 +153,10 @@ Describe 'Signal Notes launcher files' {
         (Get-Content -Raw (Join-Path $projectRoot 'start-blog.cmd')) | Should Not Match 'pnpm'
     }
 
+    It 'computes dependency fingerprints without version-specific PowerShell commands' {
+        (Get-Content -Raw (Join-Path $projectRoot 'scripts/blog-dev-common.ps1')) | Should Not Match 'Get-FileHash'
+    }
+
     It 'uses and identifies the launcher directory from the CMD wrapper' {
         $wrapper = Get-Content -Raw (Join-Path $projectRoot 'start-blog.cmd')
         $wrapper | Should Match '%~dp0start-blog\.ps1'
@@ -132,7 +178,7 @@ Describe 'Signal Notes launcher files' {
 
     It 'guards the editor autosave watcher during explicit saves' {
         $adminView = Get-Content -Raw (Join-Path $projectRoot 'frontend/src/views/AdminView.vue')
-        $adminView | Should Match 'clearTimeout\(autosaveTimer\)'
+        $adminView | Should Match 'autosave\.cancel\(\)'
         $adminView | Should Match 'autosaveSuppressed'
         $adminView | Should Match 'saving'
         $adminView | Should Match ':disabled="saving'

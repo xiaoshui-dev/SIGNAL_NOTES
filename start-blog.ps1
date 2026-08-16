@@ -22,6 +22,7 @@ $commonPath = Join-Path $projectRoot 'scripts/blog-dev-common.ps1'
 $runtimeRoot = Join-Path $projectRoot '.runtime'
 $logRoot = Join-Path $runtimeRoot 'logs'
 $pidRoot = Join-Path $runtimeRoot 'pids'
+$frontendDependencyStatePath = Join-Path $runtimeRoot 'frontend-dependencies.sha256'
 $backendRoot = Join-Path $projectRoot 'backend'
 $frontendRoot = Join-Path $projectRoot 'frontend'
 $composePath = Join-Path $projectRoot 'docker-compose.yml'
@@ -126,6 +127,41 @@ try {
     foreach ($requiredPath in @($composePath, $backendRoot, $frontendRoot)) {
         if (-not (Test-Path -LiteralPath $requiredPath)) {
             throw "Required project path is missing: $requiredPath"
+        }
+    }
+
+    $frontendDependenciesReady = Test-BlogFrontendDependencies -FrontendRoot $frontendRoot -StatePath $frontendDependencyStatePath
+    if (-not $frontendDependenciesReady -and (Test-BlogFrontendDependencies -FrontendRoot $frontendRoot)) {
+        $validationCommand = Get-BlogFrontendValidationCommand -NpmPath $npmPath
+        Push-Location $frontendRoot
+        try {
+            $validationArgs = @($validationCommand.ArgumentList)
+            & $validationCommand.FilePath @validationArgs *> $null
+            $frontendDependenciesReady = $LASTEXITCODE -eq 0
+        } finally {
+            Pop-Location
+        }
+        if ($frontendDependenciesReady) {
+            Get-BlogFrontendDependencyFingerprint -FrontendRoot $frontendRoot | Set-Content -LiteralPath $frontendDependencyStatePath -Encoding ASCII
+        }
+    }
+
+    if (-not $frontendDependenciesReady) {
+        $installCommand = Get-BlogFrontendInstallCommand -NpmPath $npmPath -FrontendRoot $frontendRoot
+        Write-BlogStatus "Installing frontend dependencies with npm $($installCommand.Mode)..." Gray
+        Push-Location $frontendRoot
+        try {
+            $installArgs = @($installCommand.ArgumentList)
+            & $installCommand.FilePath @installArgs
+            if ($LASTEXITCODE -ne 0) {
+                throw "npm $($installCommand.Mode) failed with exit code $LASTEXITCODE."
+            }
+        } finally {
+            Pop-Location
+        }
+        Get-BlogFrontendDependencyFingerprint -FrontendRoot $frontendRoot | Set-Content -LiteralPath $frontendDependencyStatePath -Encoding ASCII
+        if (-not (Test-BlogFrontendDependencies -FrontendRoot $frontendRoot -StatePath $frontendDependencyStatePath)) {
+            throw 'Frontend dependencies were installed but Vite could not be found.'
         }
     }
 
