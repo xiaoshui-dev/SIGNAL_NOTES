@@ -117,6 +117,11 @@ Describe 'Signal Notes launcher files' {
         $dockerfile | Should Match '(?i)npm run build'
     }
 
+    It 'does not expose database implementation status in the public blog intro' {
+        $blogView = Get-Content -Raw (Join-Path $projectRoot 'frontend/src/views/BlogView.vue')
+        $blogView | Should Not Match 'class="api-mode"'
+    }
+
     It 'records the actual service listener processes after startup' {
         $startScript = Get-Content -Raw (Join-Path $projectRoot 'start-blog.ps1')
         $startScript | Should Match 'Write-BlogListenerProcessRecord -Path \$backendPidPath'
