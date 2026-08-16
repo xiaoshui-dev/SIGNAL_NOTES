@@ -940,6 +940,12 @@ body { font-size: 16px; }
 .admin-shell .public-copy-grid label,
 .admin-shell .mail-settings-grid label,
 .admin-shell .account-form label { font-size: 13px; }
+.admin-shell .segmented button,
+.admin-shell .admin-top-actions { font-size: 12px; }
+.admin-shell .post-admin-table .table-head,
+.admin-shell .post-admin-table .table-row > a small { font-size: 12px; }
+.admin-shell .mail-status span { font-size: 13px; }
+.blog-shell .filter-bar button span { font-size: 11px; }
 button, a, input, textarea, select { touch-action: manipulation; }
 :focus-visible { outline: 3px solid var(--signal); outline-offset: 3px; }
 .icon-button, .row-actions button, .row-actions a, .article-cover figcaption button { min-width: 40px; min-height: 40px; }

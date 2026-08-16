@@ -340,6 +340,12 @@ Describe 'Signal Notes public reading experience guards' {
         $styles = Get-Content -Raw (Join-Path $projectRoot 'frontend/src/assets/styles.css')
         $styles | Should Match '(?s)\.blog-shell \.empty-state.*?font-size: 13px'
         $styles | Should Match '(?s)\.admin-shell \.admin-table.*?font-size: 13px'
+        $styles | Should Match '(?s)\.admin-shell \.segmented button.*?font-size: 12px'
+        $styles | Should Match '(?s)\.admin-shell \.post-admin-table \.table-head.*?font-size: 12px'
+        $styles | Should Match '(?s)\.admin-shell \.mail-status span.*?font-size: 13px'
+        $styles | Should Match '(?s)\.admin-shell \.admin-top-actions.*?font-size: 12px'
+        $styles | Should Match '(?s)\.admin-shell \.post-admin-table \.table-row > a small.*?font-size: 12px'
+        $styles | Should Match '(?s)\.blog-shell \.filter-bar button span.*?font-size: 11px'
         $styles | Should Match ':focus-visible'
         $styles | Should Match 'min-width: 40px; min-height: 40px'
         $styles | Should Match '\.inline-success\.is-error'
