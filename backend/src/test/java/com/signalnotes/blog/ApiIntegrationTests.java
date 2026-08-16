@@ -77,9 +77,17 @@ class ApiIntegrationTests {
         Post post = posts.findBySlug("test-post").orElseThrow();
         post.setCover(url);
         posts.saveAndFlush(post);
+        SiteUser account = siteUsers.findByLoginName("admin").orElseThrow();
+        account.setAvatarUrl(url);
+        siteUsers.saveAndFlush(account);
         mvc.perform(get("/api/media")).andExpect(status().isOk())
             .andExpect(jsonPath("$[0].referenceCount").value(1))
+            .andExpect(jsonPath("$[0].avatarReference").value(true))
             .andExpect(jsonPath("$[0].deletable").value(false));
+        mvc.perform(delete("/api/admin/media/{id}", id).with(auth)).andExpect(status().isConflict())
+            .andExpect(jsonPath("$.message").value("媒体正在用作账户头像，请先更换或清除头像"));
+        account.setAvatarUrl(null);
+        siteUsers.saveAndFlush(account);
         mvc.perform(delete("/api/admin/media/{id}", id).with(auth)).andExpect(status().isBadRequest())
             .andExpect(jsonPath("$.message").value(org.hamcrest.Matchers.containsString("1 篇文章")));
         post.setCover(null);
@@ -121,6 +129,9 @@ class ApiIntegrationTests {
                 .andExpect(jsonPath("$.authorId").value(account.getId()))
                 .andExpect(jsonPath("$.authorName").value("Sheldon"))
                 .andExpect(jsonPath("$.authorAvatarUrl").value("/uploads/avatar.png"));
+            Post stored = posts.findBySlug("owned-author").orElseThrow();
+            Assertions.assertEquals(account.getId(), stored.getAuthor().getId());
+            Assertions.assertEquals("Sheldon", stored.getAuthorName());
 
             mvc.perform(get("/api/admin/me").with(auth))
                 .andExpect(status().isOk())

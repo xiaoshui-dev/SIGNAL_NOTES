@@ -15,6 +15,8 @@ public class ApiExceptionHandler {
 
     @ExceptionHandler(EntityNotFoundException.class)
     ResponseEntity<Map<String, Object>> notFound(EntityNotFoundException error) { return error(HttpStatus.NOT_FOUND, error.getMessage()); }
+    @ExceptionHandler(ConflictException.class)
+    ResponseEntity<Map<String, Object>> conflict(ConflictException error) { return error(HttpStatus.CONFLICT, error.getMessage()); }
     @ExceptionHandler({IllegalArgumentException.class, MethodArgumentNotValidException.class})
     ResponseEntity<Map<String, Object>> badRequest(Exception error) { return error(HttpStatus.BAD_REQUEST, error.getMessage()); }
     @ExceptionHandler(Exception.class)
