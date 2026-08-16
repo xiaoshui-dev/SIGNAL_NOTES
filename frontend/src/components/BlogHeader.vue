@@ -1,5 +1,5 @@
 <script setup>
-import { Home, Menu, Moon, Search, Sun, X } from 'lucide-vue-next';
+import { Home, Menu, Moon, RadioTower, Search, Sun, X } from 'lucide-vue-next';
 import { ref } from 'vue';
 import { useRouter } from 'vue-router';
 import BrandLogo from './BrandLogo.vue';
@@ -17,6 +17,7 @@ function search() { if (query.value.trim()) router.push({ path: '/blog/search', 
 <template>
   <header class="blog-header">
     <BrandLogo to="/blog" />
+    <span class="signal-status"><RadioTower :size="14" aria-hidden="true" /> LIVE / HTTP</span>
     <nav class="blog-nav" :class="{ 'is-open': open }" aria-label="博客导航">
       <RouterLink to="/blog">{{ site.blogNavPostsLabel }}</RouterLink><RouterLink to="/blog/categories">{{ site.blogNavCategoriesLabel }}</RouterLink><RouterLink to="/blog/tags">{{ site.blogNavTagsLabel }}</RouterLink><RouterLink to="/blog/archives">{{ site.blogNavArchivesLabel }}</RouterLink><RouterLink to="/blog/about">{{ site.blogNavAboutLabel }}</RouterLink>
     </nav>

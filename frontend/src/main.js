@@ -1,4 +1,12 @@
 import { createApp } from 'vue';
+import '@fontsource/fusion-pixel-12px-proportional-sc/400.css';
+import '@fontsource/noto-sans-sc/400.css';
+import '@fontsource/noto-sans-sc/500.css';
+import '@fontsource/noto-sans-sc/600.css';
+import '@fontsource/noto-sans-sc/700.css';
+import '@fontsource/noto-serif-sc/600.css';
+import '@fontsource/noto-serif-sc/700.css';
+import '@fontsource/noto-serif-sc/900.css';
 import App from './App.vue';
 import router from './router';
 import './assets/styles.css';

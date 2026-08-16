@@ -10,6 +10,11 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@dicebear/core": "9.4.2",
+    "@dicebear/pixel-art": "9.4.2",
+    "@fontsource/fusion-pixel-12px-proportional-sc": "5.3.0",
+    "@fontsource/noto-sans-sc": "5.3.0",
+    "@fontsource/noto-serif-sc": "5.3.0",
     "dompurify": "^3.2.6",
     "lucide-vue-next": "^0.468.0",
     "marked": "^15.0.7",
