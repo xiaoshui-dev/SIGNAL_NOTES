@@ -86,8 +86,10 @@ public class NotificationMailService {
             sender.setUsername(config.username());
             sender.setPassword(config.password());
             Properties props = sender.getJavaMailProperties();
+            boolean implicitTls = config.port() == 465;
             props.put("mail.smtp.auth", Boolean.toString(config.auth()));
-            props.put("mail.smtp.starttls.enable", Boolean.toString(config.starttls()));
+            props.put("mail.smtp.ssl.enable", Boolean.toString(implicitTls));
+            props.put("mail.smtp.starttls.enable", Boolean.toString(config.starttls() && !implicitTls));
             props.put("mail.smtp.connectiontimeout", Integer.toString(SMTP_TIMEOUT_MILLIS));
             props.put("mail.smtp.timeout", Integer.toString(SMTP_TIMEOUT_MILLIS));
             props.put("mail.smtp.writetimeout", Integer.toString(SMTP_TIMEOUT_MILLIS));

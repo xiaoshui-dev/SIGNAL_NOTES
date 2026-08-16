@@ -543,6 +543,27 @@ class ApiIntegrationTests {
         Assertions.assertEquals("5000", properties.getProperty("mail.smtp.writetimeout"));
     }
 
+    @Test void smtpPort465UsesImplicitTlsInsteadOfStartTls() {
+        SettingRepository repository = org.mockito.Mockito.mock(SettingRepository.class);
+        org.mockito.Mockito.when(repository.findAll()).thenReturn(List.of(
+            setting("mail.enabled", "true"), setting("mail.host", "smtp.163.com"), setting("mail.port", "465"),
+            setting("mail.from", "sender@163.com"), setting("mail.notificationTo", "owner@163.com"),
+            setting("mail.auth", "true"), setting("mail.starttls", "true"), setting("mail.username", "sender@163.com"),
+            setting("mail.password", "mail-client-authorization-code")
+        ));
+        var service = new com.signalnotes.blog.service.NotificationMailService(repository, "http://127.0.0.1:5174");
+        Properties properties = new Properties();
+        try (var ignored = org.mockito.Mockito.mockConstruction(org.springframework.mail.javamail.JavaMailSenderImpl.class,
+                (sender, context) -> {
+                    org.mockito.Mockito.when(sender.getJavaMailProperties()).thenReturn(properties);
+                    org.mockito.Mockito.when(sender.createMimeMessage()).thenReturn(new jakarta.mail.internet.MimeMessage(jakarta.mail.Session.getInstance(new Properties())));
+                })) {
+            Assertions.assertTrue(service.sendTest("reader@example.com"));
+        }
+        Assertions.assertEquals("true", properties.getProperty("mail.smtp.ssl.enable"));
+        Assertions.assertEquals("false", properties.getProperty("mail.smtp.starttls.enable"));
+    }
+
     private SiteSetting setting(String key, String value) {
         SiteSetting setting = new SiteSetting();
         setting.setKey(key);

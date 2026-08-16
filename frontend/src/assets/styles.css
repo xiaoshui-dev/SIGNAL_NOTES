@@ -706,8 +706,15 @@ body::before { content: ''; position: fixed; z-index: 100; top: 0; left: 0; widt
 .mail-settings-grid input:not([type="checkbox"]) { min-height: 38px; padding: 0 9px; border: 1px solid var(--line); background: transparent; color: var(--ink); font-size: 11px; }
 .mail-settings-grid .mail-enabled { display: flex; align-items: center; gap: 8px; color: var(--ink); }
 .mail-settings-grid input[type="checkbox"] { width: 16px; height: 16px; accent-color: var(--signal); }
-.mail-settings-actions { display: flex; align-items: center; gap: 8px; padding: 0 22px 22px; }
+.mail-settings-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; padding: 0 22px 22px; }
 .mail-settings-actions input { min-height: 38px; min-width: 220px; padding: 0 9px; border: 1px solid var(--line); background: transparent; color: var(--ink); font-size: 11px; }
+.mail-settings-actions .button:disabled { cursor: wait; opacity: .6; transform: none; }
+.mail-test-result { flex-basis: 100%; font-size: 12px; line-height: 1.5; }
+.mail-test-result.is-success { color: #39791d; }
+.mail-test-result.is-error { color: #a72f20; }
+.mail-test-result.is-info { color: #285c6b; }
+.spin { animation: spin .8s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
 .public-copy-panel { margin-top: 18px; }
 .public-copy-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; padding: 22px; }
 .public-copy-grid label { display: grid; gap: 8px; color: var(--ink-soft); font: 500 10px/1 'IBM Plex Mono', monospace; }
