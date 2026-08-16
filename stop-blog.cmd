@@ -1,8 +1,4 @@
 @echo off
 cd /d "%~dp0"
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%~dp0stop-blog.ps1" %*
-if errorlevel 1 (
-  pause
-) else (
-  timeout /t 2 /nobreak >nul
-)
+if errorlevel 1 pause
