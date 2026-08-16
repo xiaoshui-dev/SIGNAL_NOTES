@@ -19,7 +19,8 @@ public class Post {
     @ManyToOne(fetch = FetchType.EAGER) @JoinColumn(name = "category_id") private Category category;
     @ElementCollection(fetch = FetchType.EAGER) @CollectionTable(name = "post_tags", joinColumns = @JoinColumn(name = "post_id")) @Column(name = "tag", length = 80) private Set<String> tags = new LinkedHashSet<>();
     @Enumerated(EnumType.STRING) @Column(nullable = false, length = 20) private PostStatus status = PostStatus.DRAFT;
-    @Column(name = "author_name", nullable = false, length = 80) private String authorName = "林默";
+    @Column(name = "author_name", nullable = false, length = 80) private String authorName = "站点作者";
+    @ManyToOne(fetch = FetchType.EAGER) @JoinColumn(name = "author_id") private SiteUser author;
     @Column(name = "published_at") private LocalDate publishedAt;
     @Column(name = "updated_at", nullable = false) private LocalDate updatedAt = LocalDate.now();
     @Column(name = "read_minutes", nullable = false) private Integer readMinutes = 5;

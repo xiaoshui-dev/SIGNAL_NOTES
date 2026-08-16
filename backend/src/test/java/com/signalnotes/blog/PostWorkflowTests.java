@@ -4,7 +4,9 @@ import com.signalnotes.blog.domain.Post;
 import com.signalnotes.blog.domain.PostStatus;
 import com.signalnotes.blog.repository.PostRepository;
 import com.signalnotes.blog.repository.PostRevisionRepository;
+import com.signalnotes.blog.repository.SettingRepository;
 import com.signalnotes.blog.service.PostService;
+import com.signalnotes.blog.domain.SiteSetting;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -19,6 +21,7 @@ class PostWorkflowTests {
     @Autowired PostService service;
     @Autowired PostRepository posts;
     @Autowired PostRevisionRepository revisions;
+    @Autowired SettingRepository settings;
 
     @BeforeEach
     void clean() {
@@ -51,5 +54,21 @@ class PostWorkflowTests {
         Post deleted = posts.findById(saved.id()).orElseThrow();
         assertEquals(PostStatus.TRASHED, deleted.getStatus());
         assertNotNull(deleted.getDeletedAt());
+    }
+
+    @Test
+    void missingArticleAuthorUsesConfiguredFallbackWhenNoAccountNameWasSubmitted() {
+        SiteSetting author = settings.findById("authorName").orElseGet(SiteSetting::new);
+        author.setKey("authorName");
+        author.setValue("站点作者");
+        settings.save(author);
+
+        var saved = service.save(null, new PostService.PostInput(
+            "configured-author", "使用站点作者", "摘要", "正文", null, "", "系统设计",
+            Set.of(), PostStatus.DRAFT, "  ", null, 5,
+            null, null, null, null, false
+        ));
+
+        assertEquals("站点作者", saved.authorName());
     }
 }

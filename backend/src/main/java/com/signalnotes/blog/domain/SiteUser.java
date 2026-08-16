@@ -12,6 +12,7 @@ public class SiteUser {
     @Column(nullable = false, unique = true, length = 180) private String email;
     @Column(nullable = false, length = 30) private String role = "AUTHOR";
     @Column(nullable = false, length = 20) private String status = "ACTIVE";
+    @Column(name = "avatar_url", length = 500) private String avatarUrl;
     @Column(name = "last_login_at") private Instant lastLoginAt;
     @Column(name = "login_name", unique = true, length = 80) private String loginName;
     @JsonIgnore @Column(name = "password_hash", length = 255) private String passwordHash;

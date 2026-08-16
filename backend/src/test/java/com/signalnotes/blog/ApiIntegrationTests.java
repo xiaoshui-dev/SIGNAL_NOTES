@@ -103,6 +103,36 @@ class ApiIntegrationTests {
         }
     }
 
+    @Test void currentAccountProfileOwnsNewPostIdentity() throws Exception {
+        var auth = org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.httpBasic("admin", "signal2026");
+        SiteUser account = siteUsers.findByLoginName("admin").orElseThrow();
+        String originalName = account.getName();
+        try {
+            mvc.perform(put("/api/admin/account/profile").with(auth).contentType(MediaType.APPLICATION_JSON)
+                    .content("{\"name\":\"Sheldon\",\"avatarUrl\":\"/uploads/avatar.png\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.name").value("Sheldon"))
+                .andExpect(jsonPath("$.avatarUrl").value("/uploads/avatar.png"));
+
+            mvc.perform(post("/api/admin/posts").with(auth).contentType(MediaType.APPLICATION_JSON).content("""
+                    {"slug":"owned-author","title":"账户作者","excerpt":"摘要","content":"正文内容","category":"系统设计","tags":[],"status":"DRAFT","authorName":"不能伪造的名字","readMinutes":3}
+                    """))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.authorId").value(account.getId()))
+                .andExpect(jsonPath("$.authorName").value("Sheldon"))
+                .andExpect(jsonPath("$.authorAvatarUrl").value("/uploads/avatar.png"));
+
+            mvc.perform(get("/api/admin/me").with(auth))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(account.getId()))
+                .andExpect(jsonPath("$.name").value("Sheldon"))
+                .andExpect(jsonPath("$.avatarUrl").value("/uploads/avatar.png"));
+        } finally {
+            mvc.perform(put("/api/admin/account/profile").with(auth).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"name\":\"" + originalName + "\",\"avatarUrl\":\"\"}"));
+        }
+    }
+
     @Test void publicPostApiReturnsPublishedContent() throws Exception {
         mvc.perform(get("/api/posts")).andExpect(status().isOk()).andExpect(jsonPath("$[0].slug").value("test-post"));
         mvc.perform(get("/api/posts/test-post")).andExpect(status().isOk()).andExpect(jsonPath("$.title").value("测试文章"));

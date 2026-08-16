@@ -4,6 +4,7 @@ import { Check, Clipboard, Download, Image as ImageIcon, Share2, X } from 'lucid
 import { computed, nextTick, ref, watch } from 'vue';
 import { useSite } from '../site';
 import { resolveShareUrl } from '../shareUrl';
+import { resolveAuthorName, resolveAvatarUrl } from '../authorIdentity';
 
 const props = defineProps({ post: { type: Object, required: true } });
 const { site } = useSite();
@@ -16,6 +17,8 @@ const status = ref('');
 const statusTone = ref('success');
 let generation = 0;
 const url = computed(() => resolveShareUrl(props.post, window.location.origin));
+const authorName = computed(() => resolveAuthorName(props.post.authorName, site.authorName));
+const authorAvatarUrl = computed(() => resolveAvatarUrl({ uploadedAvatarUrl: props.post.authorAvatarUrl, name: authorName.value }));
 
 function wrap(ctx, text, maxWidth, maxLines) {
   const source = String(text || '');
@@ -71,7 +74,7 @@ async function generate() {
     ctx.fillStyle = '#090d0b';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-    const [cover, qrImage] = await Promise.all([loadImage(props.post.cover), loadImage(qr.value)]);
+    const [cover, qrImage, avatarImage] = await Promise.all([loadImage(props.post.cover), loadImage(qr.value), loadImage(authorAvatarUrl.value)]);
     if (portrait) {
       drawCover(ctx, cover, 0, 0, 1080, 410);
       ctx.fillStyle = 'rgba(9,13,11,.48)';
@@ -115,9 +118,15 @@ async function generate() {
     if (qrImage) ctx.drawImage(qrImage, qrX, qrY, qrSize, qrSize);
 
     const metaY = portrait ? canvas.height - 110 : canvas.height - 50;
+    const avatarSize = portrait ? 52 : 40;
+    if (avatarImage) {
+      ctx.imageSmoothingEnabled = false;
+      ctx.drawImage(avatarImage, pad, metaY - avatarSize + 8, avatarSize, avatarSize);
+      ctx.imageSmoothingEnabled = true;
+    }
     ctx.fillStyle = '#ff6d3a';
     ctx.font = `400 ${portrait ? 22 : 17}px "Fusion Pixel 12px Proportional SC", monospace`;
-    ctx.fillText(`${props.post.authorName || site.authorName || '站点作者'} / ${String(props.post.publishedAt || '').slice(0, 10)}`, pad, metaY);
+    ctx.fillText(`${authorName.value} / ${String(props.post.publishedAt || '').slice(0, 10)}`, pad + avatarSize + 14, metaY);
     ctx.fillStyle = 'rgba(249,251,247,.65)';
     ctx.font = `400 ${portrait ? 18 : 14}px "Noto Sans SC", sans-serif`;
     ctx.fillText(site.shareScanLabel, qrX, qrY - 26);
@@ -139,7 +148,7 @@ watch([
   () => site.siteName, () => site.siteShortName, () => site.siteTagline,
   () => site.sharePosterTitle, () => site.shareScanLabel,
   () => props.post.slug, () => props.post.canonicalUrl, () => props.post.title,
-  () => props.post.excerpt, () => props.post.cover, () => props.post.authorName,
+  () => props.post.excerpt, () => props.post.cover, () => props.post.authorName, () => props.post.authorAvatarUrl,
   () => props.post.publishedAt,
 ], async () => { if (open.value) { await nextTick(); generate(); } });
 
