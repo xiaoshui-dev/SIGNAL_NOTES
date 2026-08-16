@@ -47,7 +47,7 @@ start-blog.cmd
   └─ start-blog.ps1
       ├─ docker compose up -d mysql
       ├─ mvn spring-boot:run  -> 127.0.0.1:8081
-      └─ pnpm dev --host 127.0.0.1 --port 5174 --strictPort
+      └─ pnpm dev ...（无 pnpm 时使用 npm run dev -- ...）
 ```
 
 脚本使用以下本地开发值：
@@ -56,7 +56,7 @@ start-blog.cmd
 | --- | --- | --- |
 | MySQL | `127.0.0.1:3307` | Compose 的 `mysql` 服务，使用现有 `.env` 的数据库凭据，并强制端口映射为 `3307:3306` |
 | 后端 | `127.0.0.1:8081` | `DB_PORT=3307`、`SERVER_PORT=8081` |
-| 前端 | `127.0.0.1:5174` | `pnpm dev --host 127.0.0.1 --port 5174 --strictPort` |
+| 前端 | `127.0.0.1:5174` | 优先 `pnpm dev ...`，无 pnpm 时使用 `npm run dev -- ...` |
 
 `8080` 明确列为不可触碰端口，因为当前由 Traefik 使用。脚本不会停止、重启或修改该端口上的进程。
 
@@ -64,7 +64,7 @@ start-blog.cmd
 
 ### 5.1 前置检查
 
-脚本检查 Docker Desktop、`docker compose`、Java 21、Maven、Node.js 和 pnpm 是否可调用，并验证 `frontend`、`backend` 和 `docker-compose.yml` 存在。缺少依赖时输出安装项和实际检测结果，然后保留终端窗口。
+脚本检查 Docker Desktop、`docker compose`、Java 21、Maven、Node.js 以及 pnpm/npm 至少一个前端包管理器是否可调用，并验证 `frontend`、`backend` 和 `docker-compose.yml` 存在。缺少依赖时输出安装项和实际检测结果，然后保留终端窗口。
 
 ### 5.2 数据库
 
@@ -85,7 +85,7 @@ start-blog.cmd
 
 - 如果本地 PID 记录对应的 Vite 进程仍存在且页面标题为 `Signal Notes`，则复用。
 - 如果页面可访问但不是 Signal Notes，视为外部占用并退出，不覆盖其他项目。
-- 端口空闲时，从 `frontend` 目录启动 pnpm，并启用 `--strictPort`，避免 Vite 静默换端口导致后端代理和浏览器地址不一致。
+- 端口空闲时，优先从 `frontend` 目录启动 pnpm；双击环境没有 pnpm 时回退到 `npm run dev -- --host 127.0.0.1 --port 5174 --strictPort`，避免 Vite 静默换端口导致后端代理和浏览器地址不一致。
 
 ### 5.5 收尾
 
@@ -108,7 +108,7 @@ start-blog.cmd
 - `.runtime/logs/frontend.log`
 - `.runtime/logs/frontend-error.log`
 
-PID 文件至少记录 PID、服务名、启动时间、工作目录和端口。停止脚本只读取由启动脚本创建且仍能通过工作目录/命令行校验的 PID，并使用 Windows 进程树结束对应 Maven/Java 或 pnpm/Node 进程。外部启动的服务、MySQL 容器和 `8080` 上的 Traefik 不在停止范围内。
+PID 文件至少记录 PID、服务名、启动时间、工作目录和端口。停止脚本只读取由启动脚本创建且仍能通过工作目录/命令行校验的 PID，并使用 Windows 进程树结束对应 Maven/Java 或 pnpm/npm/Node 进程。外部启动的服务、MySQL 容器和 `8080` 上的 Traefik 不在停止范围内。
 
 如果 PID 文件过期或进程已退出，停止脚本只清理记录，不尝试结束新的复用 PID。启动脚本会在每次运行前清理过期 PID 记录。
 
@@ -135,6 +135,6 @@ PID 文件至少记录 PID、服务名、启动时间、工作目录和端口。
 ## 9. 非目标
 
 - 不把开发启动器改造成生产部署工具。
-- 不自动安装 Docker、Java、Maven、Node.js 或 pnpm。
+- 不自动安装 Docker、Java、Maven、Node.js、pnpm 或 npm。
 - 不改变 Compose 默认生产端口映射，不停止 Traefik。
 - 不清理数据库、上传文件、备份文件或 Docker volumes。

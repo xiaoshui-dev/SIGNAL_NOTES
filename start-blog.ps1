@@ -111,7 +111,25 @@ try {
     Assert-BlogCommand -Name 'java' -InstallHint 'JDK 21 or newer'
     Assert-BlogCommand -Name 'mvn' -InstallHint 'Apache Maven'
     Assert-BlogCommand -Name 'node' -InstallHint 'Node.js'
-    Assert-BlogCommand -Name 'pnpm' -InstallHint 'pnpm (corepack enable or npm install --global pnpm)'
+
+    $pnpmCommand = Get-Command pnpm.cmd -ErrorAction SilentlyContinue
+    if (-not $pnpmCommand) {
+        $pnpmCommand = Get-Command pnpm -ErrorAction SilentlyContinue
+    }
+    $npmCommand = Get-Command npm.cmd -ErrorAction SilentlyContinue
+    if (-not $npmCommand) {
+        $npmCommand = Get-Command npm -ErrorAction SilentlyContinue
+    }
+    $pnpmPath = if ($pnpmCommand) { [string]$pnpmCommand.Source } else { '' }
+    if ([string]::IsNullOrWhiteSpace($pnpmPath) -and $pnpmCommand) {
+        $pnpmPath = [string]$pnpmCommand.Path
+    }
+    $npmPath = if ($npmCommand) { [string]$npmCommand.Source } else { '' }
+    if ([string]::IsNullOrWhiteSpace($npmPath) -and $npmCommand) {
+        $npmPath = [string]$npmCommand.Path
+    }
+    $frontendCommand = Get-BlogFrontendCommand -PnpmPath $pnpmPath -NpmPath $npmPath -Port $frontendPort
+    Write-BlogStatus "Frontend package manager: $($frontendCommand.Mode)" DarkGray
 
     foreach ($requiredPath in @($composePath, $backendRoot, $frontendRoot)) {
         if (-not (Test-Path -LiteralPath $requiredPath)) {
@@ -235,10 +253,9 @@ try {
         }
 
         Write-BlogStatus "Starting Vite frontend at $frontendUrl..." Gray
-        $pnpmCommand = (Get-Command pnpm -ErrorAction Stop).Source
-        $frontendProcess = Start-BlogChildProcess -FilePath $pnpmCommand -ArgumentList @('dev', '--host', '127.0.0.1', '--port', [string]$frontendPort, '--strictPort') -WorkingDirectory $frontendRoot -StandardOutputPath (Join-Path $logRoot 'frontend.log') -StandardErrorPath (Join-Path $logRoot 'frontend-error.log')
+        $frontendProcess = Start-BlogChildProcess -FilePath $frontendCommand.FilePath -ArgumentList $frontendCommand.ArgumentList -WorkingDirectory $frontendRoot -StandardOutputPath (Join-Path $logRoot 'frontend.log') -StandardErrorPath (Join-Path $logRoot 'frontend-error.log')
         $null = $startedRecords.Add($frontendPidPath)
-        Write-BlogProcessRecord -Path $frontendPidPath -Service 'frontend' -Process $frontendProcess -WorkingDirectory $frontendRoot -Port $frontendPort -CommandPattern 'pnpm' | Out-Null
+        Write-BlogProcessRecord -Path $frontendPidPath -Service 'frontend' -Process $frontendProcess -WorkingDirectory $frontendRoot -Port $frontendPort -CommandPattern $frontendCommand.CommandPattern | Out-Null
 
         $frontendReady = Wait-BlogCondition -Description 'Vite frontend' -TimeoutSec 60 -Condition {
             $probe = Invoke-BlogHttpProbe -Uri $frontendUrl

@@ -87,6 +87,36 @@ function ConvertTo-BlogText {
     return [string]$Content
 }
 
+function Get-BlogFrontendCommand {
+    param(
+        [AllowEmptyString()]
+        [string]$PnpmPath,
+        [AllowEmptyString()]
+        [string]$NpmPath,
+        [int]$Port = 5174
+    )
+
+    if (-not [string]::IsNullOrWhiteSpace($PnpmPath)) {
+        return [pscustomobject]@{
+            Mode         = 'pnpm'
+            CommandPattern = 'pnpm'
+            FilePath     = $PnpmPath
+            ArgumentList = @('dev', '--host', '127.0.0.1', '--port', [string]$Port, '--strictPort')
+        }
+    }
+
+    if (-not [string]::IsNullOrWhiteSpace($NpmPath)) {
+        return [pscustomobject]@{
+            Mode         = 'npm'
+            CommandPattern = 'npm'
+            FilePath     = $NpmPath
+            ArgumentList = @('run', 'dev', '--', '--host', '127.0.0.1', '--port', [string]$Port, '--strictPort')
+        }
+    }
+
+    throw 'No supported frontend package manager was found. Install pnpm or Node.js with npm.'
+}
+
 function Invoke-BlogHttpProbe {
     param(
         [Parameter(Mandatory = $true)]
