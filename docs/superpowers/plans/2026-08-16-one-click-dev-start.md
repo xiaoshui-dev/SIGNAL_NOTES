@@ -113,7 +113,7 @@ param(
 )
 ```
 
-Resolve all paths from `$PSScriptRoot`; create `.runtime/logs` and `.runtime/pids`; verify `docker`, `java`, `mvn`, `node`, and pnpm/npm; prefer pnpm and fall back to `npm run dev` when pnpm is absent; force Compose `MYSQL_PORT=3307` only for the current command; wait for `signal-notes-mysql` to become healthy; start Maven with `DB_PORT=3307` and `SERVER_PORT=8081`; pass `--host 127.0.0.1 --port 5174 --strictPort`; write process records with the actual command pattern; wait for the backend health JSON and Signal Notes HTML; open the browser unless `-NoBrowser` is present.
+Resolve all paths from `$PSScriptRoot`; create `.runtime/logs` and `.runtime/pids`; verify `docker`, `java`, `mvn`, `node`, and npm, with pnpm as an optional fallback; prefer `npm run dev` and use pnpm only when npm is unavailable; force Compose `MYSQL_PORT=3307` only for the current command; wait for `signal-notes-mysql` to become healthy; start Maven with `DB_PORT=3307` and `SERVER_PORT=8081`; pass `--host 127.0.0.1 --port 5174 --strictPort`; write process records with the actual command pattern; wait for the backend health JSON and Signal Notes HTML; open the browser unless `-NoBrowser` is present.
 
 If a target port is already serving the expected service, reuse it. If it belongs to another service, report the listener PID/name and exit without killing it. On a failed launch, stop only frontend/backend processes created by the current invocation and keep MySQL running.
 

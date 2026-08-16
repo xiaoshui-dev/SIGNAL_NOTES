@@ -110,7 +110,7 @@ try {
     Assert-BlogCommand -Name 'docker' -InstallHint 'Docker Desktop'
     Assert-BlogCommand -Name 'java' -InstallHint 'JDK 21 or newer'
     Assert-BlogCommand -Name 'mvn' -InstallHint 'Apache Maven'
-    Assert-BlogCommand -Name 'node' -InstallHint 'Node.js'
+    Assert-BlogCommand -Name 'node' -InstallHint 'Node.js (includes npm)'
 
     $pnpmCommand = Get-Command pnpm.cmd -ErrorAction SilentlyContinue
     if (-not $pnpmCommand) {
@@ -129,7 +129,7 @@ try {
         $npmPath = [string]$npmCommand.Path
     }
     $frontendCommand = Get-BlogFrontendCommand -PnpmPath $pnpmPath -NpmPath $npmPath -Port $frontendPort
-    Write-BlogStatus "Frontend package manager: $($frontendCommand.Mode)" DarkGray
+    Write-BlogStatus "Frontend runner: $($frontendCommand.Mode)" DarkGray
 
     foreach ($requiredPath in @($composePath, $backendRoot, $frontendRoot)) {
         if (-not (Test-Path -LiteralPath $requiredPath)) {

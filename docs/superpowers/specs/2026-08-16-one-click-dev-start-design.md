@@ -47,7 +47,7 @@ start-blog.cmd
   └─ start-blog.ps1
       ├─ docker compose up -d mysql
       ├─ mvn spring-boot:run  -> 127.0.0.1:8081
-      └─ pnpm dev ...（无 pnpm 时使用 npm run dev -- ...）
+      └─ npm run dev -- ...（仅在 npm 不可用时使用 pnpm dev ...）
 ```
 
 脚本使用以下本地开发值：
@@ -56,7 +56,7 @@ start-blog.cmd
 | --- | --- | --- |
 | MySQL | `127.0.0.1:3307` | Compose 的 `mysql` 服务，使用现有 `.env` 的数据库凭据，并强制端口映射为 `3307:3306` |
 | 后端 | `127.0.0.1:8081` | `DB_PORT=3307`、`SERVER_PORT=8081` |
-| 前端 | `127.0.0.1:5174` | 优先 `pnpm dev ...`，无 pnpm 时使用 `npm run dev -- ...` |
+| 前端 | `127.0.0.1:5174` | 优先 `npm run dev -- ...`，仅在 npm 不可用时使用 `pnpm dev ...` |
 
 `8080` 明确列为不可触碰端口，因为当前由 Traefik 使用。脚本不会停止、重启或修改该端口上的进程。
 
@@ -64,7 +64,7 @@ start-blog.cmd
 
 ### 5.1 前置检查
 
-脚本检查 Docker Desktop、`docker compose`、Java 21、Maven、Node.js 以及 pnpm/npm 至少一个前端包管理器是否可调用，并验证 `frontend`、`backend` 和 `docker-compose.yml` 存在。缺少依赖时输出安装项和实际检测结果，然后保留终端窗口。
+脚本检查 Docker Desktop、`docker compose`、Java 21、Maven、Node.js/npm，以及 pnpm 备用命令是否可调用，并验证 `frontend`、`backend` 和 `docker-compose.yml` 存在。缺少依赖时输出安装项和实际检测结果，然后保留终端窗口。
 
 ### 5.2 数据库
 
@@ -85,7 +85,7 @@ start-blog.cmd
 
 - 如果本地 PID 记录对应的 Vite 进程仍存在且页面标题为 `Signal Notes`，则复用。
 - 如果页面可访问但不是 Signal Notes，视为外部占用并退出，不覆盖其他项目。
-- 端口空闲时，优先从 `frontend` 目录启动 pnpm；双击环境没有 pnpm 时回退到 `npm run dev -- --host 127.0.0.1 --port 5174 --strictPort`，避免 Vite 静默换端口导致后端代理和浏览器地址不一致。
+- 端口空闲时，优先从 `frontend` 目录启动 `npm run dev -- --host 127.0.0.1 --port 5174 --strictPort`；只有 npm 不可用时才使用 pnpm，避免 Vite 静默换端口导致后端代理和浏览器地址不一致。
 
 ### 5.5 收尾
 

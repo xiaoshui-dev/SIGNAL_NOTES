@@ -96,15 +96,6 @@ function Get-BlogFrontendCommand {
         [int]$Port = 5174
     )
 
-    if (-not [string]::IsNullOrWhiteSpace($PnpmPath)) {
-        return [pscustomobject]@{
-            Mode         = 'pnpm'
-            CommandPattern = 'pnpm'
-            FilePath     = $PnpmPath
-            ArgumentList = @('dev', '--host', '127.0.0.1', '--port', [string]$Port, '--strictPort')
-        }
-    }
-
     if (-not [string]::IsNullOrWhiteSpace($NpmPath)) {
         return [pscustomobject]@{
             Mode         = 'npm'
@@ -114,7 +105,16 @@ function Get-BlogFrontendCommand {
         }
     }
 
-    throw 'No supported frontend package manager was found. Install pnpm or Node.js with npm.'
+    if (-not [string]::IsNullOrWhiteSpace($PnpmPath)) {
+        return [pscustomobject]@{
+            Mode         = 'pnpm'
+            CommandPattern = 'pnpm'
+            FilePath     = $PnpmPath
+            ArgumentList = @('dev', '--host', '127.0.0.1', '--port', [string]$Port, '--strictPort')
+        }
+    }
+
+    throw 'No supported frontend runtime was found. Install Node.js (npm is included) and add it to PATH.'
 }
 
 function Invoke-BlogHttpProbe {

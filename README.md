@@ -6,7 +6,7 @@
 
 在 Windows 资源管理器中双击项目根目录的 `start-blog.cmd`。脚本会检查 Docker、Java、Maven、Node.js 和可用的前端包管理器，启动或复用 MySQL、Spring Boot 和 Vite，并在服务就绪后打开浏览器。
 
-前端启动优先使用 pnpm；如果双击环境没有 pnpm 但有 Node.js 自带的 npm，会自动回退到 `npm run dev`，不需要额外安装 pnpm。
+前端启动优先使用 Node.js 自带的 npm；如果 npm 不可用但系统安装了 pnpm，脚本才会使用 pnpm，不需要额外安装 pnpm。
 
 开发模式固定使用以下地址：
 
@@ -37,8 +37,8 @@
 ```powershell
 # 前端
 cd frontend
-pnpm install
-pnpm dev --host 127.0.0.1 --port 5174 --strictPort
+npm install
+npm run dev -- --host 127.0.0.1 --port 5174 --strictPort
 
 # 后端（需要本机 MySQL，或先启动 Compose 的 mysql 服务）
 cd backend
