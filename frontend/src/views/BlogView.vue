@@ -13,6 +13,7 @@ import {
   submitContact,
 } from "../api";
 import { useSite } from "../site";
+import { postsForTaxonomy, resolveTaxonomy, taxonomyPath } from "../taxonomyRoutes";
 
 const route = useRoute();
 const router = useRouter();
@@ -75,6 +76,10 @@ const hasUsableContent = computed(() => Boolean(items.value.length || categories
 const isBlockingConnectionError = computed(() => isConnectionError.value && !hasUsableContent.value);
 const topic = computed(() => route.query.topic || "");
 const routeSlug = computed(() => route.params.slug || "");
+const routeCategory = computed(() => resolveTaxonomy(categories.value, routeSlug.value));
+const routeCategoryPosts = computed(() => postsForTaxonomy(items.value, routeCategory.value, "category"));
+const routeTag = computed(() => resolveTaxonomy(tags.value, routeSlug.value));
+const routeTagPosts = computed(() => postsForTaxonomy(items.value, routeTag.value, "tag"));
 const routeAuthor = computed(() => ({
   ...getAuthor(route.params.id),
   name: site.authorName,
@@ -412,17 +417,13 @@ async function doContact() {
         ><template v-if="routeSlug"
           ><header class="page-heading">
             <span>TOPIC / 003</span>
-            <h1>{{ routeSlug }}</h1>
+            <h1>{{ routeCategory?.name || routeSlug }}</h1>
             <p>{{ site.categoryRouteIntro }}</p>
           </header>
           <div v-if="isBlockingConnectionError" class="empty-state"><span>{{ site.noConnectionLabel }}</span><h2>{{ site.noConnectionTitle }}</h2><p>{{ site.noConnectionDescription }}</p><button class="button" type="button" :disabled="loading" @click="refreshPosts">{{ loading ? site.reconnectingLabel : site.reconnectLabel }}</button></div>
           <section v-if="!isBlockingConnectionError" class="post-list compact-post-list">
             <article
-              v-for="post in items.filter(
-                (item) =>
-                  item.category === routeSlug ||
-                  item.category?.toLowerCase() === routeSlug.toLowerCase(),
-              )"
+              v-for="post in routeCategoryPosts"
               :key="post.id"
               class="post-card"
             >
@@ -439,7 +440,7 @@ async function doContact() {
                 <p>{{ post.excerpt }}</p>
               </div>
             </article>
-          </section><div v-if="!isBlockingConnectionError && !items.some((item) => item.category === routeSlug || item.category?.toLowerCase() === routeSlug.toLowerCase())" class="empty-state"><span>{{ site.noNotesLabel }}</span><h2>{{ site.noPublicPosts }}</h2><p>{{ site.noPublicPostsDescription }}</p><RouterLink class="button" to="/blog/categories">{{ site.categoriesTitle }}</RouterLink></div></template
+          </section><div v-if="!isBlockingConnectionError && !routeCategoryPosts.length" class="empty-state"><span>{{ site.noNotesLabel }}</span><h2>{{ site.noPublicPosts }}</h2><p>{{ site.noPublicPostsDescription }}</p><RouterLink class="button" to="/blog/categories">{{ site.categoriesTitle }}</RouterLink></div></template
         ><template v-else
           ><header class="page-heading">
             <span>TOPICS / 003</span>
@@ -451,9 +452,7 @@ async function doContact() {
             <RouterLink
               v-for="(category, index) in categories"
               :key="category.slug"
-              :to="{
-                path: `/blog/categories/${encodeURIComponent(category.name)}`,
-              }"
+              :to="taxonomyPath('categories', category)"
               ><span>0{{ index + 1 }}</span>
               <h2>{{ category.name }}</h2>
               <p>{{ category.description }}</p>
@@ -470,7 +469,7 @@ async function doContact() {
               <RouterLink
                 v-for="tag in tags"
                 :key="tag.slug"
-                :to="{ path: `/blog/tags/${encodeURIComponent(tag.name)}` }"
+                :to="taxonomyPath('tags', tag)"
                 >#{{ tag.name }} <small>{{ site.tagPostCountLabel.replace('{count}', tag.count) }}</small></RouterLink
               >
             </div>
@@ -482,15 +481,13 @@ async function doContact() {
         ><template v-if="routeSlug"
           ><header class="page-heading">
             <span>TAG / 008</span>
-            <h1>#{{ routeSlug }}</h1>
+            <h1>#{{ routeTag?.name || routeSlug }}</h1>
             <p>{{ site.tagRouteIntro }}</p>
           </header>
           <div v-if="isBlockingConnectionError" class="empty-state"><span>{{ site.noConnectionLabel }}</span><h2>{{ site.noConnectionTitle }}</h2><p>{{ site.noConnectionDescription }}</p><button class="button" type="button" :disabled="loading" @click="refreshPosts">{{ loading ? site.reconnectingLabel : site.reconnectLabel }}</button></div>
           <section v-else class="post-list compact-post-list">
             <article
-              v-for="post in items.filter((item) =>
-                item.tags?.includes(routeSlug),
-              )"
+              v-for="post in routeTagPosts"
               :key="post.id"
               class="post-card"
             >
@@ -509,7 +506,7 @@ async function doContact() {
             </article>
           </section>
           <div
-            v-if="!isBlockingConnectionError && !items.some((item) => item.tags?.includes(routeSlug))"
+            v-if="!isBlockingConnectionError && !routeTagPosts.length"
             class="empty-state"
           >
             <span>{{ site.noNotesLabel }}</span>
@@ -531,7 +528,7 @@ async function doContact() {
               <RouterLink
                 v-for="tag in tags"
                 :key="tag.slug"
-                :to="`/blog/tags/${encodeURIComponent(tag.name)}`"
+                :to="taxonomyPath('tags', tag)"
                 >#{{ tag.name }} <small>{{ site.tagPostCountLabel.replace('{count}', tag.count) }}</small></RouterLink
               >
             </div>
