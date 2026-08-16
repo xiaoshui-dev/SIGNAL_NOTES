@@ -27,7 +27,7 @@
 - Create: `tests/one-click-start.Tests.ps1`
 - Test: `tests/one-click-start.Tests.ps1`
 
-- [ ] **Step 1: Write failing tests for service-state decisions**
+- [x] **Step 1: Write failing tests for service-state decisions**
 
 Create Pester tests that dot-source `scripts/blog-dev-common.ps1` and assert:
 
@@ -49,7 +49,7 @@ Describe 'Get-BlogPortDecision' {
 
 Also test that Signal Notes HTML is recognized only when it contains the expected title, stale PID records do not validate, all four scripts parse without PowerShell syntax errors, and CMD wrappers reference the matching PowerShell filenames.
 
-- [ ] **Step 2: Run the focused tests and verify they fail**
+- [x] **Step 2: Run the focused tests and verify they fail**
 
 Run:
 
@@ -65,7 +65,7 @@ Expected: FAIL because `scripts/blog-dev-common.ps1` and launcher files do not e
 - Create: `scripts/blog-dev-common.ps1`
 - Test: `tests/one-click-start.Tests.ps1`
 
-- [ ] **Step 1: Implement the tested helper interface**
+- [x] **Step 1: Implement the tested helper interface**
 
 Provide these focused functions:
 
@@ -85,7 +85,7 @@ function Test-SignalNotesFrontendHtml {
 
 Add helpers for locating listeners, probing HTTP with timeouts, waiting with progress messages, reading/writing JSON PID records, verifying process ID plus exact UTC start time, stopping a verified process tree, and showing the tail of error logs.
 
-- [ ] **Step 2: Run tests and verify helper tests pass**
+- [x] **Step 2: Run tests and verify helper tests pass**
 
 Run the Pester command from Task 1.
 
@@ -101,7 +101,7 @@ Expected: helper tests PASS; launcher-file tests still FAIL until Task 3.
 - Modify: `.gitignore`
 - Test: `tests/one-click-start.Tests.ps1`
 
-- [ ] **Step 1: Implement `start-blog.ps1`**
+- [x] **Step 1: Implement `start-blog.ps1`**
 
 The script must:
 
@@ -117,7 +117,7 @@ Resolve all paths from `$PSScriptRoot`; create `.runtime/logs` and `.runtime/pid
 
 If a target port is already serving the expected service, reuse it. If it belongs to another service, report the listener PID/name and exit without killing it. On a failed launch, stop only frontend/backend processes created by the current invocation and keep MySQL running.
 
-- [ ] **Step 2: Implement `stop-blog.ps1`**
+- [x] **Step 2: Implement `stop-blog.ps1`**
 
 For `frontend.json` and `backend.json`, validate process ID and start time before running:
 
@@ -127,7 +127,7 @@ taskkill.exe /PID $record.pid /T /F
 
 Remove stale PID records without stopping an unrelated reused PID. Never stop MySQL, Docker Compose, or port 8080.
 
-- [ ] **Step 3: Implement CMD wrappers**
+- [x] **Step 3: Implement CMD wrappers**
 
 Use a root-relative wrapper so paths containing spaces work:
 
@@ -140,7 +140,7 @@ if errorlevel 1 pause
 
 The stop wrapper mirrors this with `stop-blog.ps1` and keeps the final result visible.
 
-- [ ] **Step 4: Ignore runtime state**
+- [x] **Step 4: Ignore runtime state**
 
 Add this exact entry to `.gitignore`:
 
@@ -148,7 +148,7 @@ Add this exact entry to `.gitignore`:
 .runtime/
 ```
 
-- [ ] **Step 5: Run Pester and syntax checks**
+- [x] **Step 5: Run Pester and syntax checks**
 
 Run:
 
@@ -159,7 +159,7 @@ git diff --check
 
 Expected: all tests PASS and no whitespace errors.
 
-- [ ] **Step 6: Commit the launcher implementation**
+- [x] **Step 6: Commit the launcher implementation**
 
 ```powershell
 git add -- scripts/blog-dev-common.ps1 start-blog.ps1 stop-blog.ps1 start-blog.cmd stop-blog.cmd tests/one-click-start.Tests.ps1 .gitignore
@@ -171,11 +171,11 @@ git commit -m "feat: add one-click dev launcher"
 **Files:**
 - Modify: `README.md`
 
-- [ ] **Step 1: Update README**
+- [x] **Step 1: Update README**
 
 Document double-click and terminal usage, fixed ports `3307`, `8081`, and `5174`, `-NoBrowser`, `-SkipMysql`, `stop-blog.cmd`, `.runtime/logs/`, dependency requirements, and the rule that stop preserves MySQL data and port 8080.
 
-- [ ] **Step 2: Run a cold-start smoke test**
+- [x] **Step 2: Run a cold-start smoke test**
 
 Run:
 
@@ -186,17 +186,17 @@ Run:
 
 Expected: MySQL healthy, backend health `UP`, frontend title recognized, and both PID records exist.
 
-- [ ] **Step 3: Run an idempotency smoke test**
+- [x] **Step 3: Run an idempotency smoke test**
 
 Run startup again with `-NoBrowser` and compare recorded PIDs before/after.
 
 Expected: PIDs are unchanged and output reports service reuse.
 
-- [ ] **Step 4: Verify scoped shutdown**
+- [x] **Step 4: Verify scoped shutdown**
 
 Capture listeners on `8080` and MySQL container status, run `stop-blog.ps1`, then verify ports `8081` and `5174` are free while `8080` still has the same owner and `signal-notes-mysql` remains healthy.
 
-- [ ] **Step 5: Run project regression checks**
+- [x] **Step 5: Run project regression checks**
 
 Run:
 
@@ -208,7 +208,7 @@ docker compose config --quiet
 
 Expected: frontend build succeeds, backend tests pass, and Compose configuration validates.
 
-- [ ] **Step 6: Commit documentation and verification evidence**
+- [x] **Step 6: Commit documentation and verification evidence**
 
 ```powershell
 git add -- README.md docs/superpowers/plans/2026-08-16-one-click-dev-start.md
