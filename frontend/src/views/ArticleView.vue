@@ -9,7 +9,7 @@ import BlogFooter from '../components/BlogFooter.vue';
 import PixelAvatar from '../components/PixelAvatar.vue';
 import SharePoster from '../components/SharePoster.vue';
 import SignalIndex from '../components/SignalIndex.vue';
-import { formatDate, getAuthor } from '../data';
+import { formatDate } from '../date';
 import { authorInitials, resolveAuthorName } from '../authorIdentity';
 import { apiRequest, submitComment } from '../api';
 import { setArticleJsonLd, setPageSeo } from '../seo';
@@ -31,7 +31,7 @@ const allPosts = ref([]);
 const readingProgress = ref(0);
 const activeHeading = ref('');
 
-const author = computed(() => { const legacy = getAuthor(post.value?.authorId); const name = resolveAuthorName(post.value?.authorName, site.authorName); return { ...legacy, id: post.value?.authorId || legacy.id, name, initials: authorInitials(name), avatarUrl: post.value?.authorAvatarUrl || '', role: site.authorRole, bio: site.authorBio }; });
+const author = computed(() => { const name = resolveAuthorName(post.value?.authorName, site.authorName); return { id: post.value?.authorId || 'account', name, initials: authorInitials(name), avatarUrl: post.value?.authorAvatarUrl || '', role: site.authorRole, bio: site.authorBio }; });
 const article = computed(() => {
   if (!post.value) return { html: '', headings: [] };
   const headings = [];

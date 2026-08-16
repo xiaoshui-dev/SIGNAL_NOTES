@@ -5,7 +5,7 @@ import { useRoute, useRouter } from "vue-router";
 import BlogHeader from "../components/BlogHeader.vue";
 import BlogFooter from "../components/BlogFooter.vue";
 import PixelAvatar from "../components/PixelAvatar.vue";
-import { formatDate, getAuthor } from "../data";
+import { formatDate } from "../date";
 import { authorInitials, resolveAuthorName } from "../authorIdentity";
 import {
   loadCategories,
@@ -84,10 +84,9 @@ const routeTag = computed(() => resolveTaxonomy(tags.value, routeSlug.value));
 const routeTagPosts = computed(() => postsForTaxonomy(items.value, routeTag.value, "tag"));
 const authorPosts = computed(() => items.value.filter((item) => String(item.authorId || '') === String(route.params.id || '')));
 const routeAuthor = computed(() => {
-  const legacy = getAuthor(route.params.id);
   const source = authorPosts.value[0];
   const name = resolveAuthorName(source?.authorName, site.authorName);
-  return { ...legacy, id: source?.authorId || legacy.id, name, initials: authorInitials(name), avatarUrl: source?.authorAvatarUrl || '', role: site.authorRole, bio: site.authorBio };
+  return { id: source?.authorId || route.params.id || 'account', name, initials: authorInitials(name), avatarUrl: source?.authorAvatarUrl || '', role: site.authorRole, bio: site.authorBio };
 });
 const filtered = computed(() =>
   topic.value
