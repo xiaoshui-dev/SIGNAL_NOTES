@@ -8,5 +8,6 @@ backend/backups/
 .idea/
 .vscode/
 *.log
+.runtime/
 .DS_Store
 Thumbs.db
