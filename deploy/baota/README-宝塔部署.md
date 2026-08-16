@@ -5,7 +5,7 @@
 ## 一、部署包内容
 
 ```text
-signal-notes-baota/
+signal-notes/
 ├─ frontend/                         前端生产静态文件
 ├─ backend/signal-notes-blog.jar     后端可执行程序
 ├─ database/signal_notes.sql         当前内容的脱敏数据库备份
