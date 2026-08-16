@@ -869,3 +869,29 @@ body::before { content: ''; position: fixed; z-index: 100; top: 0; left: 0; widt
   .comment-form .button { justify-self: start; }
   .reading-toast { left: 16px; right: 16px; bottom: 16px; justify-content: space-between; }
 }
+
+/* Readability floor: operational labels stay compact without dropping below a comfortable size. */
+body { font-size: 16px; }
+.post-card-copy > p, .band-heading > p, .about-copy > p, .blog-intro > p, .legal-copy p, .contact-page p, .about-page-grid > div > p, .blog-footer p, .landing-footer p { font-size: 15px; line-height: 1.85; }
+.article-content { font-size: 17px; line-height: 1.95; }
+.article-content p, .article-content li { font-size: 17px; }
+.post-meta, .article-side, .article-breadcrumb, .article-tags, .archive-list span, .archive-list time { font-size: 12px; }
+.blog-nav a, .landing-nav a, .blog-footer nav, .landing-footer a, .read-link, .text-link { font-size: 13px; }
+.category-grid p, .topic-row small, .search-results p, .subscribe-box p { font-size: 14px; line-height: 1.75; }
+.brand-copy small, .section-kicker, .page-index, .api-mode, .hero-status span, .admin-kicker { font-size: 10px; }
+.admin-shell aside nav a, .admin-aside-bottom a, .admin-aside-bottom button { font-size: 12px; }
+.admin-page-header p, .panel-heading > small, .moderation-list article p, .inbox-list article > p { font-size: 13px; }
+.admin-table .table-row, .admin-table .table-row span, .admin-table .table-row time, .quick-action-list strong { font-size: 12px; }
+.admin-table .table-row > a small, .user-table .table-row > div small, .subscriber-list small, .inbox-list article > header span { font-size: 11px; }
+.editor-card label, .settings-panel > label, .mail-settings-grid label, .public-copy-grid label, .account-form label { font-size: 11px; line-height: 1.35; }
+.editor-card input, .editor-card select, .settings-panel input, .settings-panel textarea, .mail-settings-grid input:not([type="checkbox"]), .public-copy-grid input, .public-copy-grid textarea, .user-create-form input, .user-management-list input, .user-management-list select { font-size: 13px; }
+.row-text-button, .bulk-bar button, .segmented button { font-size: 11px; }
+
+@media (max-width: 680px) {
+  .mail-settings-grid, .public-copy-grid { grid-template-columns: 1fr; }
+  .public-copy-grid label.wide { grid-column: auto; }
+  .mail-settings-actions, .subscriber-toolbar { align-items: stretch; flex-direction: column; }
+  .mail-settings-actions input, .subscriber-toolbar input { min-width: 0; width: 100%; }
+  .user-create-form, .user-management-list > div { grid-template-columns: 1fr; }
+  .subscriber-list > div { grid-template-columns: minmax(0, 1fr) 110px 36px; padding: 10px 14px; }
+}

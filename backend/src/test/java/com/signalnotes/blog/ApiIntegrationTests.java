@@ -59,6 +59,7 @@ class ApiIntegrationTests {
             .andExpect(status().isOk()).andExpect(jsonPath("$.filename").value("updated.png"));
         MockMultipartFile fake = new MockMultipartFile("file", "fake.png", "image/png", new byte[]{1,2,3});
         mvc.perform(multipart("/api/admin/media").file(fake).with(auth)).andExpect(status().isBadRequest());
+        mvc.perform(delete("/api/admin/media/{id}", id).with(auth)).andExpect(status().isNoContent());
     }
 
     @Test void adminCanChangePasswordAndOldPasswordStopsWorking() throws Exception {
@@ -109,7 +110,9 @@ class ApiIntegrationTests {
     }
 
     @Test void publicTaxonomyAndSiteSettingsComeFromTheDatabase() throws Exception {
-        var setting = new SiteSetting(); setting.setKey("heroTitle"); setting.setValue("数据库里的标题"); settings.save(setting);
+        var auth = org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.httpBasic("admin", "signal2026");
+        mvc.perform(put("/api/admin/settings").with(auth).contentType(MediaType.APPLICATION_JSON).content("{\"heroTitle\":\"数据库里的标题\"}"))
+            .andExpect(status().isOk());
         mvc.perform(get("/api/categories")).andExpect(status().isOk()).andExpect(jsonPath("$[0].name").value("系统设计"));
         mvc.perform(get("/api/tags")).andExpect(status().isOk()).andExpect(jsonPath("$").isArray());
         mvc.perform(get("/api/site")).andExpect(status().isOk()).andExpect(jsonPath("$.heroTitle").value("数据库里的标题"));
@@ -131,6 +134,8 @@ class ApiIntegrationTests {
         mvc.perform(post("/api/subscriptions").contentType(MediaType.APPLICATION_JSON).content("{\"email\":\"subscriber@example.com\"}"))
             .andExpect(status().isCreated()).andExpect(jsonPath("$.message").value(org.hamcrest.Matchers.containsString("邮件服务尚未配置")));
         mvc.perform(get("/api/admin/subscriptions").with(auth)).andExpect(status().isOk()).andExpect(jsonPath("$[0].email").value("subscriber@example.com"));
+        mvc.perform(post("/api/admin/email/test").with(auth).contentType(MediaType.APPLICATION_JSON).content("{\"to\":\"owner@example.com\"}"))
+            .andExpect(status().isOk()).andExpect(jsonPath("$.configured").value(false)).andExpect(jsonPath("$.sent").value(false));
         mvc.perform(post("/api/contact").contentType(MediaType.APPLICATION_JSON).content("{\"name\":\"读者\",\"email\":\"inbox@example.com\",\"subject\":\"后台反馈\",\"message\":\"这是一条应该进入后台收件箱的内容\",\"consent\":true}"))
             .andExpect(status().isCreated());
         mvc.perform(get("/api/admin/contact-messages").with(auth)).andExpect(status().isOk()).andExpect(jsonPath("$[0].subject").value("后台反馈"));
