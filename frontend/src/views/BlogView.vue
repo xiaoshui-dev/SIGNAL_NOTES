@@ -229,7 +229,7 @@ async function doContact() {
           </div>
           <p>{{ site.blogIntro }}</p>
         </section>
-        <section class="filter-bar">
+        <section class="filter-bar terminal-filter" aria-label="文章分类命令条">
           <button :class="{ active: !topic }" @click="router.push('/blog')">
             {{ site.blogFilterAllLabel }}
             <span>{{ items.length }}</span></button
@@ -251,6 +251,7 @@ async function doContact() {
             class="post-card"
             :class="{ 'is-large': index === 0 && !topic }"
           >
+            <span class="post-scan-number" aria-hidden="true">{{ String(index + 1).padStart(2, '0') }}</span>
             <RouterLink class="post-card-cover" :to="`/blog/posts/${post.slug}`"
               ><img :src="post.cover" :alt="post.coverAlt"
             /></RouterLink>
