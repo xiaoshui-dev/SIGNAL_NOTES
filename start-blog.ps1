@@ -228,6 +228,7 @@ try {
             Show-BlogLogTail -Path (Join-Path $logRoot 'backend.log')
             throw "Backend did not become healthy on port $backendPort."
         }
+        Write-BlogListenerProcessRecord -Path $backendPidPath -Service 'backend' -WorkingDirectory $backendRoot -Port $backendPort -CommandPattern 'BlogApplication' | Out-Null
         Write-BlogStatus "Backend ready on 127.0.0.1:$backendPort" Green
     }
 
@@ -258,6 +259,7 @@ try {
             Show-BlogLogTail -Path (Join-Path $logRoot 'frontend.log')
             throw "Frontend did not become ready on port $frontendPort."
         }
+        Write-BlogListenerProcessRecord -Path $frontendPidPath -Service 'frontend' -WorkingDirectory $frontendRoot -Port $frontendPort -CommandPattern 'vite' | Out-Null
         Write-BlogStatus "Frontend ready at $frontendUrl" Green
     }
 

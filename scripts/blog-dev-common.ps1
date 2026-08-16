@@ -187,6 +187,28 @@ function Write-BlogProcessRecord {
     return $record
 }
 
+function Write-BlogListenerProcessRecord {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$Path,
+        [Parameter(Mandatory = $true)]
+        [string]$Service,
+        [Parameter(Mandatory = $true)]
+        [string]$WorkingDirectory,
+        [Parameter(Mandatory = $true)]
+        [int]$Port,
+        [Parameter(Mandatory = $true)]
+        [string]$CommandPattern
+    )
+
+    $listeners = @(Get-BlogPortListeners -Port $Port | Select-Object -ExpandProperty OwningProcess -Unique)
+    if ($listeners.Count -ne 1) {
+        throw "Expected one listener for $Service on port $Port, found $($listeners.Count)."
+    }
+    $process = Get-Process -Id ([int]$listeners[0]) -ErrorAction Stop
+    Write-BlogProcessRecord -Path $Path -Service $Service -Process $process -WorkingDirectory $WorkingDirectory -Port $Port -CommandPattern $CommandPattern
+}
+
 function Read-BlogProcessRecord {
     param(
         [Parameter(Mandatory = $true)]

@@ -109,4 +109,10 @@ Describe 'Signal Notes launcher files' {
         (Get-Content -Raw (Join-Path $projectRoot 'start-blog.ps1')) | Should Not Match 'pnpm'
         (Get-Content -Raw (Join-Path $projectRoot 'scripts/blog-dev-common.ps1')) | Should Not Match 'pnpm'
     }
+
+    It 'records the actual service listener processes after startup' {
+        $startScript = Get-Content -Raw (Join-Path $projectRoot 'start-blog.ps1')
+        $startScript | Should Match 'Write-BlogListenerProcessRecord -Path \$backendPidPath'
+        $startScript | Should Match 'Write-BlogListenerProcessRecord -Path \$frontendPidPath'
+    }
 }
