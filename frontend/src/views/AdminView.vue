@@ -7,7 +7,7 @@ import {
 import { computed, nextTick, onMounted, reactive, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { adminRequest, apiRequest, createAdminToken } from '../api';
-import { site as publicSite } from '../site';
+import { applySite, site as publicSite } from '../site';
 import AdminAdvancedCopy from '../components/AdminAdvancedCopy.vue';
 
 const route = useRoute();
@@ -245,8 +245,10 @@ async function saveSettings() { if (adminLoading.value || adminLoadError.value) 
     const savedSettings = await adminRequest('/admin/settings', { method: 'PUT', body: JSON.stringify(settings.value) });
     settingsMutationVersion += 1;
     settings.value = { ...settings.value, ...savedSettings };
+    const result = Object.fromEntries(Object.entries(savedSettings).filter(([key]) => !key.startsWith('mail.')));
+    applySite(result);
     apiStatus.value = 'MySQL 已连接';
-    flash('设置已保存，公开页面刷新后生效');
+    flash('设置已保存，公开页面已同步');
   } catch (error) { apiStatus.value = '后端未连接'; flashError(error.message || '设置保存失败'); }
   finally { settingsSaving.value = false; }
 }

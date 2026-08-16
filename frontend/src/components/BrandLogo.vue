@@ -9,6 +9,6 @@ onMounted(() => loadSite().catch(() => {}));
 <template>
   <RouterLink class="brand" :to="to" :class="{ 'brand-light': light }">
     <span class="brand-mark" aria-hidden="true"><i /><i /><i /></span>
-    <span class="brand-copy"><b>{{ site.siteName }}</b><small>{{ site.siteShortName }}</small></span>
+    <span class="brand-copy"><b>{{ site.siteName }}</b><small>{{ site.siteShortName }} · {{ site.siteTagline }}</small></span>
   </RouterLink>
 </template>

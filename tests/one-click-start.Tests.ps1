@@ -142,7 +142,7 @@ Describe 'Signal Notes launcher files' {
         $landingView = Get-Content -Raw (Join-Path $projectRoot 'frontend/src/views/LandingView.vue')
         $blogHeader = Get-Content -Raw (Join-Path $projectRoot 'frontend/src/components/BlogHeader.vue')
         $blogView = Get-Content -Raw (Join-Path $projectRoot 'frontend/src/views/BlogView.vue')
-        $landingView | Should Match 'categories\.value\.map'
+        $landingView | Should Match 'validCategories\.map'
         $landingView | Should Not Match 'configured\.length\) return configured'
         $landingView | Should Match ':key="topic\.name"'
         $landingView | Should Not Match 'saved\.number'
@@ -210,6 +210,70 @@ Describe 'Signal Notes launcher files' {
         $adminView | Should Match 'subscriptionUpdateGenerations\.get\(item\.id\) === generation'
         $adminView | Should Match ':disabled="pendingContactUpdates\.has\(item\.id\)"'
         $adminView | Should Match ':disabled="pendingSubscriptionUpdates\.has\(item\.id\)"'
+    }
+
+    It 'keeps public copy database-backed and live in the current SPA' {
+        $siteController = Get-Content -Raw (Join-Path $projectRoot 'backend/src/main/java/com/signalnotes/blog/controller/SiteController.java')
+        $migration = Get-Content -Raw (Join-Path $projectRoot 'backend/src/main/resources/db/migration/V9__complete_site_copy_defaults.sql')
+        $adminView = Get-Content -Raw (Join-Path $projectRoot 'frontend/src/views/AdminView.vue')
+        $blogView = Get-Content -Raw (Join-Path $projectRoot 'frontend/src/views/BlogView.vue')
+        $statusView = Get-Content -Raw (Join-Path $projectRoot 'frontend/src/views/StatusView.vue')
+        $siteController | Should Not Match 'result\.put\("siteName"'
+        $siteController | Should Match 'SiteSettingPolicy\.PUBLIC_KEYS\.contains'
+        $adminController = Get-Content -Raw (Join-Path $projectRoot 'backend/src/main/java/com/signalnotes/blog/controller/AdminController.java')
+        $policy = Get-Content -Raw (Join-Path $projectRoot 'backend/src/main/java/com/signalnotes/blog/service/SiteSettingPolicy.java')
+        $siteModule = Get-Content -Raw (Join-Path $projectRoot 'frontend/src/site.js')
+        $migration | Should Match 'ON DUPLICATE KEY UPDATE'
+        foreach ($key in @('tagsTitle', 'archiveIntro', 'categoryRouteIntro', 'status403Title', 'statusDefaultDescription', 'noResultsTitle', 'contactConsentLabel', 'contactNameLabel', 'contactEmailLabel', 'contactSubjectLabel', 'contactMessageLabel', 'noNotesLabel', 'articleNotFoundTitle', 'commentsTitle', 'commentsSubmitLabel', 'articleCopyLinkLabel', 'privacyRightsHeading', 'landingRecentLabel')) {
+            $migration | Should Match "\('$key',"
+        }
+        $adminController | Should Match 'SiteSettingPolicy\.validateAndNormalize'
+        $policy | Should Match '"shareTemplate"'
+        $policy | Should Match 'ADMIN_ONLY_KEYS = Set\.of\(\)'
+        $policy | Should Match 'MAX_KEYS = 192'
+        $siteModule | Should Match 'siteRequestGeneration'
+        $siteModule | Should Match 'export function applySite'
+        $siteModule | Should Match 'requestGeneration === siteRequestGeneration'
+        $siteModule | Should Match 'const trackedRequest = request\.finally'
+        $siteModule | Should Match 'sitePromise === trackedRequest'
+        $adminView | Should Match "!key\.startsWith\('mail\.'\)"
+        $blogView | Should Match 'site\.archiveIntro \|\|'
+        $blogView | Should Match 'site\.siteShortName \|\|'
+        $blogView | Should Match 'site\.contactConsentLabel'
+        $blogView | Should Match 'site\.noResultsTitle'
+        $blogView | Should Match 'site\.searchInputPlaceholder'
+        $blogView | Should Match 'site\.contactSubmitLabel'
+        $blogView | Should Match 'site\.contactNameLabel'
+        $blogView | Should Match 'site\.noNotesLabel'
+        $articleView = Get-Content -Raw (Join-Path $projectRoot 'frontend/src/views/ArticleView.vue')
+        $articleView | Should Match 'site\.articleNotFoundTitle'
+        $articleView | Should Match 'site\.commentsSubmitLabel'
+        $sharePoster = Get-Content -Raw (Join-Path $projectRoot 'frontend/src/components/SharePoster.vue')
+        $sharePoster | Should Match 'site\.shareTemplate'
+        $sharePoster | Should Match 'site\.sharePosterTitle'
+        $advancedCopy = Get-Content -Raw (Join-Path $projectRoot 'frontend/src/components/AdminAdvancedCopy.vue')
+        foreach ($key in @('siteTagline', 'landingTopics', 'landingLoadingLabel', 'blogFilterAllLabel', 'blogReadMoreLabel', 'searchResultSummary', 'shareArticleLabel', 'sharePosterTitle', 'shareCopyLinkLabel')) {
+            $advancedCopy | Should Match ("settings\." + [regex]::Escape($key))
+        }
+        $landingView = Get-Content -Raw (Join-Path $projectRoot 'frontend/src/views/LandingView.vue')
+        $landingView | Should Match 'site\.heroEnterBlog'
+        $landingView | Should Match 'site\.landingNavPosts'
+        $landingView | Should Match 'configuredItems'
+        $landingView | Should Match 'typeof item\.name === .string'
+        $landingView | Should Match 'typeof category\.description === .string'
+        $statusView | Should Match 'site\.statusRetryLabel'
+        $statusView | Should Match 'site\[`\$\{prefix\}Title`\]'
+    }
+
+    It 'keeps frontend copy defaults aligned with the backend settings contract' {
+        $siteModule = Get-Content -Raw (Join-Path $projectRoot 'frontend/src/site.js')
+        $policy = Get-Content -Raw (Join-Path $projectRoot 'backend/src/main/java/com/signalnotes/blog/service/SiteSettingPolicy.java')
+        $migration = Get-Content -Raw (Join-Path $projectRoot 'backend/src/main/resources/db/migration/V9__complete_site_copy_defaults.sql')
+        $siteKeys = [regex]::Matches($siteModule, '(?<![\w])([A-Za-z][A-Za-z0-9]*)\s*:') | ForEach-Object { $_.Groups[1].Value } | Select-Object -Unique
+        foreach ($key in $siteKeys) {
+            $policy | Should Match ('"' + [regex]::Escape($key) + '"')
+            $migration | Should Match ("\('" + [regex]::Escape($key) + "',")
+        }
     }
 
     It 'records the actual service listener processes after startup' {

@@ -7,5 +7,11 @@ import org.springframework.stereotype.Service;
 public class AuditService {
     private final AuditLogRepository logs;
     public AuditService(AuditLogRepository logs) { this.logs = logs; }
-    public void log(String actor, String action, String target) { AuditLog log = new AuditLog(); log.setActor(actor); log.setAction(action); log.setTarget(target); logs.save(log); }
+    public void log(String actor, String action, String target) {
+        AuditLog log = new AuditLog();
+        log.setActor(actor);
+        log.setAction(action);
+        log.setTarget(target == null ? "" : target.length() <= 300 ? target : target.substring(0, 297) + "...");
+        logs.save(log);
+    }
 }

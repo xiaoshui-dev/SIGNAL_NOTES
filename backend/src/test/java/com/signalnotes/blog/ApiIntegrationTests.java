@@ -29,6 +29,7 @@ class ApiIntegrationTests {
     @Autowired ContactMessageRepository contactMessages;
     @Autowired UserRepository siteUsers;
     @Autowired SettingRepository settings;
+    @Autowired org.springframework.jdbc.core.JdbcTemplate jdbc;
     @Autowired MediaRepository mediaAssets;
     @Autowired com.signalnotes.blog.service.DatabaseUserDetailsService userDetails;
     @Autowired PasswordEncoder passwordEncoder;
@@ -133,18 +134,137 @@ class ApiIntegrationTests {
 
     @Test void publicTaxonomyAndSiteSettingsComeFromTheDatabase() throws Exception {
         var auth = org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.httpBasic("admin", "signal2026");
-        mvc.perform(put("/api/admin/settings").with(auth).contentType(MediaType.APPLICATION_JSON).content("{\"heroTitle\":\"数据库里的标题\"}"))
-            .andExpect(status().isOk());
-        mvc.perform(get("/api/categories")).andExpect(status().isOk()).andExpect(jsonPath("$[0].name").value("系统设计"));
-        mvc.perform(get("/api/tags")).andExpect(status().isOk()).andExpect(jsonPath("$").isArray());
-        mvc.perform(get("/api/site")).andExpect(status().isOk())
-            .andExpect(jsonPath("$.heroTitle").value("数据库里的标题"))
-            .andExpect(jsonPath("$.searchTitle").isNotEmpty())
-            .andExpect(jsonPath("$.searchIntro").isNotEmpty())
-            .andExpect(jsonPath("$.categoriesTitle").isNotEmpty())
-            .andExpect(jsonPath("$.categoriesIntro").isNotEmpty())
-            .andExpect(jsonPath("$.aboutPrinciple1Title").isNotEmpty())
-            .andExpect(jsonPath("$.aboutPrinciple1Body").isNotEmpty());
+        String previousPassword = settings.findById("mail.password").map(SiteSetting::getValue).orElse("");
+        var copyKeys = List.of("heroTitle", "aboutBody", "tagsIntro", "status503Description");
+        var previousCopy = new java.util.LinkedHashMap<String, String>();
+        copyKeys.forEach(key -> settings.findById(key).ifPresent(item -> previousCopy.put(key, item.getValue())));
+        String previousShareTemplate = settings.findById("shareTemplate").map(SiteSetting::getValue).orElse(null);
+        boolean hadShareTemplate = settings.existsById("shareTemplate");
+        SiteSetting password = settings.findById("mail.password").orElseGet(SiteSetting::new);
+        password.setKey("mail.password");
+        password.setValue("qa-task6-public-api-secret");
+        settings.save(password);
+        try {
+            mvc.perform(put("/api/admin/settings").with(auth).contentType(MediaType.APPLICATION_JSON).content("""
+                    {"heroTitle":"qa-task6-hero","aboutBody":"qa-task6-about","tagsIntro":"qa-task6-tags","status503Description":"qa-task6-status","shareTemplate":"portrait","mail.passwordConfigured":"true"}
+                    """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.heroTitle").value("qa-task6-hero"))
+                .andExpect(jsonPath("$.aboutBody").value("qa-task6-about"))
+                .andExpect(jsonPath("$.shareTemplate").value("portrait"));
+            mvc.perform(get("/api/categories")).andExpect(status().isOk()).andExpect(jsonPath("$[0].name").value("系统设计"));
+            mvc.perform(get("/api/tags")).andExpect(status().isOk()).andExpect(jsonPath("$").isArray());
+            mvc.perform(get("/api/site")).andExpect(status().isOk())
+                .andExpect(jsonPath("$.heroTitle").value("qa-task6-hero"))
+                .andExpect(jsonPath("$.aboutBody").value("qa-task6-about"))
+                .andExpect(jsonPath("$.tagsIntro").value("qa-task6-tags"))
+                .andExpect(jsonPath("$.status503Description").value("qa-task6-status"))
+                .andExpect(jsonPath("$.shareTemplate").value("portrait"))
+                .andExpect(jsonPath("$['mail.password']").doesNotExist())
+                .andExpect(jsonPath("$['mail.enabled']").doesNotExist());
+        } finally {
+            copyKeys.forEach(key -> {
+                if (!previousCopy.containsKey(key)) {
+                    settings.deleteById(key);
+                    return;
+                }
+                SiteSetting item = settings.findById(key).orElseGet(SiteSetting::new);
+                item.setKey(key);
+                item.setValue(previousCopy.get(key));
+                settings.save(item);
+            });
+            password.setValue(previousPassword);
+            settings.save(password);
+            if (hadShareTemplate) {
+                SiteSetting item = settings.findById("shareTemplate").orElseGet(SiteSetting::new);
+                item.setKey("shareTemplate"); item.setValue(previousShareTemplate); settings.save(item);
+            } else settings.deleteById("shareTemplate");
+        }
+    }
+
+    @Test void v9SiteCopyMigrationIsIdempotentAndPreservesEditedValues() throws Exception {
+        String table = "site_settings_migration_test";
+        jdbc.execute("CREATE TABLE " + table + " (setting_key VARCHAR(100) PRIMARY KEY, setting_value CLOB)");
+        try {
+            String sql = Files.readString(Path.of("src/main/resources/db/migration/V9__complete_site_copy_defaults.sql")).replace("site_settings", table);
+            jdbc.execute(sql);
+            jdbc.update("UPDATE " + table + " SET setting_value = ? WHERE setting_key = ?", "qa-task6-preserved", "heroTitle");
+            jdbc.execute(sql);
+            Assertions.assertEquals("qa-task6-preserved", jdbc.queryForObject("SELECT setting_value FROM " + table + " WHERE setting_key = 'heroTitle'", String.class));
+            Assertions.assertTrue(jdbc.queryForObject("SELECT COUNT(*) FROM " + table, Integer.class) >= 80);
+        } finally {
+            jdbc.execute("DROP TABLE " + table);
+        }
+    }
+
+    @Test void publicSiteRejectsUnknownWritesAndHidesOperationalRows() throws Exception {
+        var auth = org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.httpBasic("admin", "signal2026");
+        String previousSecret = settings.findById("ops.internal.secret").map(SiteSetting::getValue).orElse(null);
+        String previousHeroSummary = settings.findById("heroSummary").map(SiteSetting::getValue).orElse(null);
+        boolean hadSecret = settings.existsById("ops.internal.secret");
+        boolean hadHeroSummary = settings.existsById("heroSummary");
+        SiteSetting secret = new SiteSetting();
+        secret.setKey("ops.internal.secret");
+        secret.setValue("qa-task6-secret");
+        SiteSetting nullable = new SiteSetting();
+        nullable.setKey("heroSummary");
+        nullable.setValue(null);
+        settings.saveAll(List.of(secret, nullable));
+        try {
+            mvc.perform(put("/api/admin/settings").with(auth).contentType(MediaType.APPLICATION_JSON).content("{\"ops.internal.secret\":\"rejected\"}"))
+                .andExpect(status().isBadRequest());
+            mvc.perform(get("/api/site")).andExpect(status().isOk())
+                .andExpect(jsonPath("$.heroSummary").value(""))
+                .andExpect(jsonPath("$['ops.internal.secret']").doesNotExist());
+        } finally {
+            if (hadSecret) { secret.setValue(previousSecret); settings.save(secret); } else settings.deleteById("ops.internal.secret");
+            if (hadHeroSummary) { nullable.setValue(previousHeroSummary); settings.save(nullable); } else settings.deleteById("heroSummary");
+        }
+    }
+
+    @Test void fullControlledSettingsPayloadIncludingShareAndMailSettingsIsAccepted() throws Exception {
+        var auth = org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.httpBasic("admin", "signal2026");
+        var payload = new java.util.LinkedHashMap<String, String>();
+        com.signalnotes.blog.service.SiteSettingPolicy.PUBLIC_KEYS.forEach(key -> payload.put(key, ""));
+        payload.put("heroTitle", "qa-task6-full-settings");
+        payload.put("shareTemplate", "portrait");
+        com.signalnotes.blog.service.SiteSettingPolicy.MAIL_KEYS.forEach(key -> payload.put(key, key.equals("mail.enabled") ? "false" : ""));
+        payload.put("mail.passwordConfigured", "true");
+        var previous = new java.util.LinkedHashMap<String, String>();
+        payload.keySet().forEach(key -> settings.findById(key).ifPresent(item -> previous.put(key, item.getValue())));
+        try {
+            mvc.perform(put("/api/admin/settings").with(auth).contentType(MediaType.APPLICATION_JSON)
+                    .content(com.fasterxml.jackson.databind.json.JsonMapper.builder().build().writeValueAsString(payload)))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.heroTitle").value("qa-task6-full-settings"))
+                .andExpect(jsonPath("$.shareTemplate").value("portrait"));
+            var oversized = new java.util.LinkedHashMap<String, String>();
+            for (int index = 0; index <= com.signalnotes.blog.service.SiteSettingPolicy.MAX_KEYS; index++) oversized.put("qa-unknown-" + index, "x");
+            mvc.perform(put("/api/admin/settings").with(auth).contentType(MediaType.APPLICATION_JSON)
+                    .content(com.fasterxml.jackson.databind.json.JsonMapper.builder().build().writeValueAsString(oversized)))
+                .andExpect(status().isBadRequest());
+            var oversizedValue = java.util.Map.of("heroTitle", "x".repeat(com.signalnotes.blog.service.SiteSettingPolicy.MAX_VALUE_LENGTH + 1));
+            mvc.perform(put("/api/admin/settings").with(auth).contentType(MediaType.APPLICATION_JSON)
+                    .content(com.fasterxml.jackson.databind.json.JsonMapper.builder().build().writeValueAsString(oversizedValue)))
+                .andExpect(status().isBadRequest());
+            var oversizedDerived = java.util.Map.of("mail.passwordConfigured", "x".repeat(com.signalnotes.blog.service.SiteSettingPolicy.MAX_VALUE_LENGTH + 1));
+            mvc.perform(put("/api/admin/settings").with(auth).contentType(MediaType.APPLICATION_JSON)
+                    .content(com.fasterxml.jackson.databind.json.JsonMapper.builder().build().writeValueAsString(oversizedDerived)))
+                .andExpect(status().isBadRequest());
+            var oversizedAggregate = new java.util.LinkedHashMap<String, String>();
+            com.signalnotes.blog.service.SiteSettingPolicy.PUBLIC_KEYS.stream().limit(16)
+                    .forEach(key -> oversizedAggregate.put(key, "x".repeat(com.signalnotes.blog.service.SiteSettingPolicy.MAX_VALUE_LENGTH)));
+            mvc.perform(put("/api/admin/settings").with(auth).contentType(MediaType.APPLICATION_JSON)
+                    .content(com.fasterxml.jackson.databind.json.JsonMapper.builder().build().writeValueAsString(oversizedAggregate)))
+                .andExpect(status().isBadRequest());
+        } finally {
+            payload.keySet().forEach(key -> {
+                if ("mail.passwordConfigured".equals(key)) return;
+                if (previous.containsKey(key)) {
+                    SiteSetting item = settings.findById(key).orElseGet(SiteSetting::new);
+                    item.setKey(key); item.setValue(previous.get(key)); settings.save(item);
+                } else settings.deleteById(key);
+            });
+        }
     }
 
     @Test void trashedPostCanBeRestoredAndPermanentlyDeleted() throws Exception {
