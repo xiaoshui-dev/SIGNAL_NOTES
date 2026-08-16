@@ -7,6 +7,7 @@ import {
 import { computed, nextTick, onMounted, reactive, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { adminRequest, apiRequest, createAdminToken } from '../api';
+import { adminAccessForRole, canAccessAdminRoute } from '../adminAccess';
 import { applySite, site as publicSite } from '../site';
 import AdminAdvancedCopy from '../components/AdminAdvancedCopy.vue';
 
@@ -43,7 +44,7 @@ const userDraft = ref({ name: '', email: '', loginName: '', password: '', role: 
 const commentReplies = ref({});
 const passwordForm = ref({ currentPassword: '', newPassword: '', confirmPassword: '' });
 const emailTestRecipient = ref('');
-const currentUser = ref({ loginName: '', name: '', role: 'ADMIN', status: 'ACTIVE' });
+const currentUser = ref({ loginName: '', name: '', role: 'VIEWER', status: 'ACTIVE' });
 const editor = ref({});
 const editorReady = ref(false);
 const saving = ref(false);
@@ -61,7 +62,8 @@ const allNav = [
   ['/admin/media', '媒体库', ImageIcon], ['/admin/comments', '评论', ClipboardList], ['/admin/inbox', '反馈收件箱', Inbox],
   ['/admin/subscribers', '订阅者', Mail], ['/admin/users', '用户', Users], ['/admin/settings', '设置', Settings], ['/admin/logs', '日志与备份', Activity],
 ];
-const nav = computed(() => currentUser.value.role === 'ADMIN' ? allNav : allNav.filter(([path]) => !['/admin/users', '/admin/settings', '/admin/logs'].includes(path)));
+const currentAccess = computed(() => adminAccessForRole(currentUser.value.role));
+const nav = computed(() => allNav.filter(([path]) => currentAccess.value.paths.includes(path)));
 const section = computed(() => route.path.split('/')[2] || 'dashboard');
 const editorMode = computed(() => route.path.includes('/posts/new') || route.path.includes('/edit'));
 const editId = computed(() => route.params.pathMatch?.[1]);
@@ -113,11 +115,12 @@ async function loadAdminData() {
   try {
     const profile = await adminRequest('/admin/me');
     currentUser.value = profile;
-    const canManageSystem = profile.role === 'ADMIN';
+    const access = adminAccessForRole(profile.role);
+    const canManageSystem = access.canManageSystem;
     const [dashboard, postData, commentData, userData, settingData, mediaData, taxonomy, tagData, logData, backups, contacts, subscriberData] = await Promise.all([
-      adminRequest('/admin/dashboard'), adminRequest('/admin/posts'), adminRequest('/admin/comments'), canManageSystem ? adminRequest('/admin/users') : Promise.resolve([]),
+      adminRequest('/admin/dashboard'), adminRequest('/admin/posts'), access.canReadCommunity ? adminRequest('/admin/comments') : Promise.resolve([]), canManageSystem ? adminRequest('/admin/users') : Promise.resolve([]),
       canManageSystem ? adminRequest('/admin/settings') : apiRequest('/site'), apiRequest('/media'), adminRequest('/admin/categories'), adminRequest('/admin/tags'),
-      canManageSystem ? adminRequest('/admin/logs') : Promise.resolve([]), canManageSystem ? adminRequest('/admin/backups') : Promise.resolve([]), adminRequest('/admin/contact-messages'), adminRequest('/admin/subscriptions'),
+      canManageSystem ? adminRequest('/admin/logs') : Promise.resolve([]), canManageSystem ? adminRequest('/admin/backups') : Promise.resolve([]), access.canReadCommunity ? adminRequest('/admin/contact-messages') : Promise.resolve([]), access.canReadCommunity ? adminRequest('/admin/subscriptions') : Promise.resolve([]),
     ]);
     dashboardData.value = dashboard;
     adminPosts.value = postData || [];
@@ -132,7 +135,7 @@ async function loadAdminData() {
     contactMessages.value = contacts || [];
     subscriptions.value = subscriberData || [];
     apiStatus.value = `MySQL 已连接 · ${dashboard.posts} 篇文章`;
-    if (!canManageSystem && ['/admin/users', '/admin/settings', '/admin/logs'].includes(route.path)) await router.replace('/admin');
+    if (!canAccessAdminRoute(profile.role, route.path)) await router.replace('/admin');
     syncEditor();
   } catch (error) { apiStatus.value = '后端未连接'; adminLoadError.value = error.message || '后台数据加载失败，请检查后端服务'; flashError(adminLoadError.value); }
   finally { adminLoading.value = false; }

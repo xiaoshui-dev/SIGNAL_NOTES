@@ -18,6 +18,7 @@ import java.util.List;
 import java.util.Properties;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 
 @SpringBootTest @AutoConfigureMockMvc
 class ApiIntegrationTests {
@@ -114,6 +115,55 @@ class ApiIntegrationTests {
         mvc.perform(get("/api/admin/dashboard")).andExpect(status().isUnauthorized());
         mvc.perform(get("/api/admin/dashboard").with(org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.httpBasic("admin", "signal2026")))
             .andExpect(status().isOk()).andExpect(jsonPath("$.status").value("UP"));
+    }
+
+    @Test void viewerIsReadOnlyAcrossTheAdminApi() throws Exception {
+        var viewer = user("viewer").roles("VIEWER");
+        Long postId = posts.findBySlug("test-post").orElseThrow().getId();
+
+        mvc.perform(get("/api/admin/dashboard").with(viewer)).andExpect(status().isOk());
+        mvc.perform(get("/api/admin/posts").with(viewer)).andExpect(status().isOk());
+        mvc.perform(post("/api/admin/posts").with(viewer).contentType(MediaType.APPLICATION_JSON).content("{}"))
+            .andExpect(status().isForbidden());
+        mvc.perform(delete("/api/admin/posts/{id}", postId).with(viewer))
+            .andExpect(status().isForbidden());
+        mvc.perform(post("/api/admin/categories").with(viewer).contentType(MediaType.APPLICATION_JSON).content("{}"))
+            .andExpect(status().isForbidden());
+        mvc.perform(get("/api/admin/contact-messages").with(viewer))
+            .andExpect(status().isForbidden());
+    }
+
+    @Test void authorCanWriteArticlesButCannotPerformEditorialOrSystemActions() throws Exception {
+        var author = user("author").roles("AUTHOR");
+        Long postId = posts.findBySlug("test-post").orElseThrow().getId();
+        String input = """
+            {"slug":"author-post","title":"作者文章","excerpt":"摘要","content":"足够长的正文内容用于权限测试。足够长的正文内容用于权限测试。","category":"系统设计","tags":[],"status":"DRAFT","authorName":"作者","readMinutes":3}
+            """;
+
+        mvc.perform(post("/api/admin/posts").with(author).contentType(MediaType.APPLICATION_JSON).content(input))
+            .andExpect(status().isCreated());
+        mvc.perform(delete("/api/admin/posts/{id}", postId).with(author))
+            .andExpect(status().isForbidden());
+        mvc.perform(post("/api/admin/categories").with(author).contentType(MediaType.APPLICATION_JSON).content("{}"))
+            .andExpect(status().isForbidden());
+        mvc.perform(get("/api/admin/contact-messages").with(author))
+            .andExpect(status().isForbidden());
+        mvc.perform(get("/api/admin/settings").with(author))
+            .andExpect(status().isForbidden());
+    }
+
+    @Test void editorCanManageEditorialContentButNotSystemSettings() throws Exception {
+        var editor = user("editor").roles("EDITOR");
+
+        mvc.perform(post("/api/admin/categories").with(editor).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"name\":\"编辑分类\",\"slug\":\"editor-category\",\"description\":\"权限测试\"}"))
+            .andExpect(status().isCreated());
+        mvc.perform(get("/api/admin/contact-messages").with(editor))
+            .andExpect(status().isOk());
+        mvc.perform(put("/api/admin/settings").with(editor).contentType(MediaType.APPLICATION_JSON).content("{}"))
+            .andExpect(status().isForbidden());
+        mvc.perform(post("/api/admin/backups").with(editor))
+            .andExpect(status().isForbidden());
     }
 
     @Test void contactFormReturnsTicketAndRejectsOversizedMessage() throws Exception {
