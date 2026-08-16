@@ -8,10 +8,12 @@ import com.signalnotes.blog.repository.SettingRepository;
 import com.signalnotes.blog.repository.UserRepository;
 import com.signalnotes.blog.service.PostService;
 import com.signalnotes.blog.domain.SiteSetting;
+import com.signalnotes.blog.service.AdminUserBootstrap;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.util.Set;
 
@@ -24,6 +26,7 @@ class PostWorkflowTests {
     @Autowired PostRevisionRepository revisions;
     @Autowired SettingRepository settings;
     @Autowired UserRepository users;
+    @Autowired PasswordEncoder passwordEncoder;
 
     @BeforeEach
     void clean() {
@@ -99,5 +102,22 @@ class PostWorkflowTests {
             account.setName(originalName);
             users.saveAndFlush(account);
         }
+    }
+
+    @Test
+    void bootstrapBindsLegacyArticlesWhenTheDeploymentDumpContainsNoUsers() throws Exception {
+        var saved = service.save(null, new PostService.PostInput(
+            "bootstrap-legacy-author", "首次部署历史文章", "摘要", "正文", null, "", "系统设计",
+            Set.of(), PostStatus.PUBLISHED, "林默", null, 5,
+            null, null, null, null, false
+        ));
+        assertNull(posts.findById(saved.id()).orElseThrow().getAuthor());
+
+        new AdminUserBootstrap(users, posts, passwordEncoder, "fresh-admin", "fresh-admin-password").run(null);
+
+        Post repaired = posts.findById(saved.id()).orElseThrow();
+        assertNotNull(repaired.getAuthor());
+        assertEquals("fresh-admin", repaired.getAuthor().getLoginName());
+        assertEquals(repaired.getAuthor().getName(), repaired.getAuthorName());
     }
 }
