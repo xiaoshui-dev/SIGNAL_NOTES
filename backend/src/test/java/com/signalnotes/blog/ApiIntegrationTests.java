@@ -24,6 +24,7 @@ import static org.springframework.security.test.web.servlet.request.SecurityMock
 class ApiIntegrationTests {
     @Autowired MockMvc mvc;
     @Autowired PostRepository posts;
+    @Autowired PostRevisionRepository postRevisions;
     @Autowired CategoryRepository categories;
     @Autowired TagRepository tags;
     @Autowired CommentRepository comments;
@@ -38,7 +39,7 @@ class ApiIntegrationTests {
     @Autowired PasswordEncoder passwordEncoder;
 
     @BeforeEach void seed() {
-        comments.deleteAll(); posts.deleteAll(); categories.deleteAll(); tags.deleteAll(); mediaAssets.deleteAll();
+        comments.deleteAll(); postRevisions.deleteAll(); posts.deleteAll(); categories.deleteAll(); tags.deleteAll(); mediaAssets.deleteAll();
         Category category = new Category(); category.setName("系统设计"); category.setSlug("system-design"); category.setDescription("测试分类"); category = categories.save(category);
         Post post = new Post(); post.setSlug("test-post"); post.setTitle("测试文章"); post.setExcerpt("测试摘要"); post.setContent("## 正文"); post.setCategory(category); post.setStatus(PostStatus.PUBLISHED); post.setPublishedAt(LocalDate.now()); posts.save(post);
     }
