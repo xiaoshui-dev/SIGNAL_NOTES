@@ -49,27 +49,22 @@ Describe 'Signal Notes one-click launcher helpers' {
         ConvertTo-BlogText -Content $bytes | Should Be '{"status":"UP"}'
     }
 
-    It 'prefers npm when both package managers are available' {
-        $runner = Get-BlogFrontendCommand -PnpmPath 'C:\tools\pnpm.cmd' -NpmPath 'C:\tools\npm.cmd'
+    It 'uses npm to start the frontend' {
+        $runner = Get-BlogFrontendCommand -NpmPath 'C:\tools\npm.cmd'
         $runner.Mode | Should Be 'npm'
         $runner.CommandPattern | Should Be 'npm'
         $runner.FilePath | Should Be 'C:\tools\npm.cmd'
         ($runner.ArgumentList -join ' ') | Should Be 'run dev -- --host 127.0.0.1 --port 5174 --strictPort'
     }
 
-    It 'falls back to npm when pnpm is unavailable' {
-        $runner = Get-BlogFrontendCommand -PnpmPath '' -NpmPath 'C:\tools\npm.cmd'
-        $runner.Mode | Should Be 'npm'
-        $runner.CommandPattern | Should Be 'npm'
-        $runner.FilePath | Should Be 'C:\tools\npm.cmd'
-        ($runner.ArgumentList -join ' ') | Should Be 'run dev -- --host 127.0.0.1 --port 5174 --strictPort'
-    }
-
-    It 'uses pnpm only when npm is unavailable' {
-        $runner = Get-BlogFrontendCommand -PnpmPath 'C:\tools\pnpm.cmd' -NpmPath ''
-        $runner.Mode | Should Be 'pnpm'
-        $runner.CommandPattern | Should Be 'pnpm'
-        $runner.FilePath | Should Be 'C:\tools\pnpm.cmd'
+    It 'reports that npm is required when it is unavailable' {
+        $message = ''
+        try {
+            Get-BlogFrontendCommand -NpmPath '' | Out-Null
+        } catch {
+            $message = $_.Exception.Message
+        }
+        $message | Should Match 'npm'
     }
 }
 
@@ -108,5 +103,10 @@ Describe 'Signal Notes launcher files' {
     It 'references the matching PowerShell script from each CMD wrapper' {
         (Get-Content -Raw (Join-Path $projectRoot 'start-blog.cmd')) | Should Match 'start-blog\.ps1'
         (Get-Content -Raw (Join-Path $projectRoot 'stop-blog.cmd')) | Should Match 'stop-blog\.ps1'
+    }
+
+    It 'does not require pnpm in the startup path' {
+        (Get-Content -Raw (Join-Path $projectRoot 'start-blog.ps1')) | Should Not Match 'pnpm'
+        (Get-Content -Raw (Join-Path $projectRoot 'scripts/blog-dev-common.ps1')) | Should Not Match 'pnpm'
     }
 }

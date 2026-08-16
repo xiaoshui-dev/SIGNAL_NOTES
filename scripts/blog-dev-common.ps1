@@ -90,8 +90,6 @@ function ConvertTo-BlogText {
 function Get-BlogFrontendCommand {
     param(
         [AllowEmptyString()]
-        [string]$PnpmPath,
-        [AllowEmptyString()]
         [string]$NpmPath,
         [int]$Port = 5174
     )
@@ -105,16 +103,7 @@ function Get-BlogFrontendCommand {
         }
     }
 
-    if (-not [string]::IsNullOrWhiteSpace($PnpmPath)) {
-        return [pscustomobject]@{
-            Mode         = 'pnpm'
-            CommandPattern = 'pnpm'
-            FilePath     = $PnpmPath
-            ArgumentList = @('dev', '--host', '127.0.0.1', '--port', [string]$Port, '--strictPort')
-        }
-    }
-
-    throw 'No supported frontend runtime was found. Install Node.js (npm is included) and add it to PATH.'
+    throw 'npm was not found. Install Node.js (npm is included) and add it to PATH.'
 }
 
 function Invoke-BlogHttpProbe {

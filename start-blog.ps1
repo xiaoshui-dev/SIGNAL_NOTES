@@ -112,23 +112,15 @@ try {
     Assert-BlogCommand -Name 'mvn' -InstallHint 'Apache Maven'
     Assert-BlogCommand -Name 'node' -InstallHint 'Node.js (includes npm)'
 
-    $pnpmCommand = Get-Command pnpm.cmd -ErrorAction SilentlyContinue
-    if (-not $pnpmCommand) {
-        $pnpmCommand = Get-Command pnpm -ErrorAction SilentlyContinue
-    }
     $npmCommand = Get-Command npm.cmd -ErrorAction SilentlyContinue
     if (-not $npmCommand) {
         $npmCommand = Get-Command npm -ErrorAction SilentlyContinue
-    }
-    $pnpmPath = if ($pnpmCommand) { [string]$pnpmCommand.Source } else { '' }
-    if ([string]::IsNullOrWhiteSpace($pnpmPath) -and $pnpmCommand) {
-        $pnpmPath = [string]$pnpmCommand.Path
     }
     $npmPath = if ($npmCommand) { [string]$npmCommand.Source } else { '' }
     if ([string]::IsNullOrWhiteSpace($npmPath) -and $npmCommand) {
         $npmPath = [string]$npmCommand.Path
     }
-    $frontendCommand = Get-BlogFrontendCommand -PnpmPath $pnpmPath -NpmPath $npmPath -Port $frontendPort
+    $frontendCommand = Get-BlogFrontendCommand -NpmPath $npmPath -Port $frontendPort
     Write-BlogStatus "Frontend runner: $($frontendCommand.Mode)" DarkGray
 
     foreach ($requiredPath in @($composePath, $backendRoot, $frontendRoot)) {

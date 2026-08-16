@@ -4,9 +4,9 @@
 
 ## 一键开发启动（推荐）
 
-在 Windows 资源管理器中双击项目根目录的 `start-blog.cmd`。脚本会检查 Docker、Java、Maven、Node.js 和可用的前端包管理器，启动或复用 MySQL、Spring Boot 和 Vite，并在服务就绪后打开浏览器。
+在 Windows 资源管理器中双击项目根目录的 `start-blog.cmd`。脚本会检查 Docker、Java、Maven、Node.js/npm，启动或复用 MySQL、Spring Boot 和 Vite，并在服务就绪后打开浏览器。
 
-前端启动优先使用 Node.js 自带的 npm；如果 npm 不可用但系统安装了 pnpm，脚本才会使用 pnpm，不需要额外安装 pnpm。
+前端统一使用 Node.js 自带的 npm，不需要另外安装 pnpm。
 
 开发模式固定使用以下地址：
 
@@ -62,7 +62,7 @@ docker compose up --build
 ## 测试与构建
 
 ```powershell
-cd frontend; pnpm build
+cd frontend; npm run build
 cd ../backend; mvn test
 ```
 
