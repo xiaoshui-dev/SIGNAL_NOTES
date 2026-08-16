@@ -122,6 +122,14 @@ Describe 'Signal Notes launcher files' {
         $blogView | Should Not Match 'class="api-mode"'
     }
 
+    It 'guards the editor autosave watcher during explicit saves' {
+        $adminView = Get-Content -Raw (Join-Path $projectRoot 'frontend/src/views/AdminView.vue')
+        $adminView | Should Match 'clearTimeout\(autosaveTimer\)'
+        $adminView | Should Match 'autosaveSuppressed'
+        $adminView | Should Match 'saving'
+        $adminView | Should Match ':disabled="saving'
+    }
+
     It 'records the actual service listener processes after startup' {
         $startScript = Get-Content -Raw (Join-Path $projectRoot 'start-blog.ps1')
         $startScript | Should Match 'Write-BlogListenerProcessRecord -Path \$backendPidPath'
