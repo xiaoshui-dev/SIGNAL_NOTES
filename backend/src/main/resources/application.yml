@@ -33,6 +33,7 @@ management:
         include: health,info,metrics
 
 app:
+  public-url: ${APP_PUBLIC_URL:http://127.0.0.1:5174}
   admin:
     username: ${ADMIN_USERNAME:admin}
     password: ${ADMIN_PASSWORD:signal2026}

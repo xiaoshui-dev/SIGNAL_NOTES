@@ -22,6 +22,10 @@ class ApiIntegrationTests {
     @Autowired PostRepository posts;
     @Autowired CategoryRepository categories;
     @Autowired CommentRepository comments;
+    @Autowired SubscriptionRepository subscriptions;
+    @Autowired ContactMessageRepository contactMessages;
+    @Autowired UserRepository siteUsers;
+    @Autowired SettingRepository settings;
     @Autowired InMemoryUserDetailsManager userDetails;
     @Autowired PasswordEncoder passwordEncoder;
 
@@ -102,6 +106,47 @@ class ApiIntegrationTests {
         mvc.perform(get("/api/admin/categories").with(auth)).andExpect(status().isOk());
         Long postId = posts.findBySlug("test-post").orElseThrow().getId();
         mvc.perform(get("/api/admin/posts/{id}/revisions", postId).with(auth)).andExpect(status().isOk());
+    }
+
+    @Test void publicTaxonomyAndSiteSettingsComeFromTheDatabase() throws Exception {
+        var setting = new SiteSetting(); setting.setKey("heroTitle"); setting.setValue("数据库里的标题"); settings.save(setting);
+        mvc.perform(get("/api/categories")).andExpect(status().isOk()).andExpect(jsonPath("$[0].name").value("系统设计"));
+        mvc.perform(get("/api/tags")).andExpect(status().isOk()).andExpect(jsonPath("$").isArray());
+        mvc.perform(get("/api/site")).andExpect(status().isOk()).andExpect(jsonPath("$.heroTitle").value("数据库里的标题"));
+    }
+
+    @Test void trashedPostCanBeRestoredAndPermanentlyDeleted() throws Exception {
+        var auth = org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.httpBasic("admin", "signal2026");
+        Long id = posts.findBySlug("test-post").orElseThrow().getId();
+        mvc.perform(delete("/api/admin/posts/{id}", id).with(auth)).andExpect(status().isNoContent());
+        mvc.perform(get("/api/posts/test-post")).andExpect(status().isNotFound());
+        mvc.perform(post("/api/admin/posts/{id}/restore", id).with(auth)).andExpect(status().isOk()).andExpect(jsonPath("$.status").value("DRAFT"));
+        mvc.perform(delete("/api/admin/posts/{id}", id).with(auth)).andExpect(status().isNoContent());
+        mvc.perform(delete("/api/admin/posts/{id}?permanent=true", id).with(auth)).andExpect(status().isNoContent());
+        Assertions.assertFalse(posts.existsById(id));
+    }
+
+    @Test void subscriptionsAndContactMessagesAreVisibleToAdministrators() throws Exception {
+        var auth = org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.httpBasic("admin", "signal2026");
+        mvc.perform(post("/api/subscriptions").contentType(MediaType.APPLICATION_JSON).content("{\"email\":\"subscriber@example.com\"}"))
+            .andExpect(status().isCreated()).andExpect(jsonPath("$.message").value(org.hamcrest.Matchers.containsString("邮件服务尚未配置")));
+        mvc.perform(get("/api/admin/subscriptions").with(auth)).andExpect(status().isOk()).andExpect(jsonPath("$[0].email").value("subscriber@example.com"));
+        mvc.perform(post("/api/contact").contentType(MediaType.APPLICATION_JSON).content("{\"name\":\"读者\",\"email\":\"inbox@example.com\",\"subject\":\"后台反馈\",\"message\":\"这是一条应该进入后台收件箱的内容\",\"consent\":true}"))
+            .andExpect(status().isCreated());
+        mvc.perform(get("/api/admin/contact-messages").with(auth)).andExpect(status().isOk()).andExpect(jsonPath("$[0].subject").value("后台反馈"));
+        Long id = contactMessages.findAll().stream().filter(item -> item.getEmail().equals("inbox@example.com")).findFirst().orElseThrow().getId();
+        mvc.perform(patch("/api/admin/contact-messages/{id}", id).with(auth).contentType(MediaType.APPLICATION_JSON).content("{\"status\":\"RESOLVED\"}"))
+            .andExpect(status().isOk()).andExpect(jsonPath("$.status").value("RESOLVED"));
+    }
+
+    @Test void administratorsCanCreateUpdateAndDeleteSiteUsers() throws Exception {
+        var auth = org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.httpBasic("admin", "signal2026");
+        String body = mvc.perform(post("/api/admin/users").with(auth).contentType(MediaType.APPLICATION_JSON).content("{\"name\":\"新作者\",\"email\":\"new-author@example.com\",\"role\":\"AUTHOR\"}"))
+            .andExpect(status().isCreated()).andExpect(jsonPath("$.status").value("INVITED")).andReturn().getResponse().getContentAsString();
+        Long id = com.fasterxml.jackson.databind.json.JsonMapper.builder().build().readTree(body).get("id").longValue();
+        mvc.perform(put("/api/admin/users/{id}", id).with(auth).contentType(MediaType.APPLICATION_JSON).content("{\"name\":\"新作者 2\",\"role\":\"EDITOR\",\"status\":\"ACTIVE\"}"))
+            .andExpect(status().isOk()).andExpect(jsonPath("$.role").value("EDITOR"));
+        mvc.perform(delete("/api/admin/users/{id}", id).with(auth)).andExpect(status().isNoContent());
     }
 
     @Test void backupCreatesVerifiedArtifactVisibleInTaskList() throws Exception {

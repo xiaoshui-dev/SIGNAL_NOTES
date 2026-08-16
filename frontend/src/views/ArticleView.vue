@@ -7,12 +7,12 @@ import { useRoute } from 'vue-router';
 import BlogHeader from '../components/BlogHeader.vue';
 import BlogFooter from '../components/BlogFooter.vue';
 import SharePoster from '../components/SharePoster.vue';
-import { formatDate, getAuthor, posts } from '../data';
+import { formatDate, getAuthor } from '../data';
 import { apiRequest, submitComment } from '../api';
 import { setArticleJsonLd, setPageSeo } from '../seo';
 
 const route = useRoute();
-const post = ref(posts.find((p) => p.slug === route.params.slug));
+const post = ref(null);
 const comment = ref({ name: '', content: '' });
 const comments = ref([]);
 const commentStatus = ref('');
@@ -20,7 +20,7 @@ const replyTo = ref(null);
 const contentRef = ref(null);
 const lightbox = ref({ open: false, src: '', alt: '' });
 const continueFrom = ref(0);
-const allPosts = ref(posts);
+const allPosts = ref([]);
 
 const author = computed(() => post.value?.authorName ? { ...getAuthor('lin'), name: post.value.authorName } : getAuthor(post.value?.authorId));
 const article = computed(() => {
@@ -44,8 +44,8 @@ onMounted(async () => {
     const value = await apiRequest(`/posts/${route.params.slug}`);
     if (value) post.value = value;
     const list = await apiRequest('/posts');
-    if (list?.length) allPosts.value = list;
-  } catch { /* fallback content keeps direct links readable offline */ }
+    allPosts.value = Array.isArray(list) ? list : [];
+  } catch (error) { commentStatus.value = error.message || '文章服务暂时不可用'; }
   if (post.value) {
     setPageSeo({ title: `${post.value.title} | 脉冲笔记`, description: post.value.excerpt, canonical: new URL(`/blog/posts/${post.value.slug}`, window.location.origin).href, type: 'article' });
     setArticleJsonLd(post.value);
@@ -54,7 +54,7 @@ onMounted(async () => {
   await nextTick();
   setupArticleInteractions();
   window.addEventListener('scroll', progress, { passive: true });
-  try { comments.value = orderComments(await apiRequest(`/comments?postSlug=${route.params.slug}`)); } catch { comments.value = orderComments(JSON.parse(localStorage.getItem(`signal-comments-${route.params.slug}`) || '[]')); }
+  try { comments.value = orderComments(await apiRequest(`/comments?postSlug=${route.params.slug}`)); } catch (error) { comments.value = []; commentStatus.value = error.message || '评论服务暂时不可用'; }
 });
 
 onUnmounted(() => {
@@ -88,7 +88,7 @@ function setupArticleInteractions() {
 
 function scrollToContinue() { document.querySelector('.article-content')?.scrollIntoView({ behavior: 'smooth', block: 'start' }); setTimeout(() => window.scrollTo({ top: (document.documentElement.scrollHeight - window.innerHeight) * continueFrom.value / 100, behavior: 'smooth' }), 120); }
 async function copyLink() { try { await navigator.clipboard.writeText(`${post.value.title}\n${post.value.excerpt}\n${window.location.href}`); commentStatus.value = '文章标题、摘要和链接已复制'; } catch { commentStatus.value = '请手动复制地址栏链接'; } }
-async function addComment() { if (!comment.value.name.trim() || comment.value.content.trim().length < 2 || comment.value.content.length > 2000) { commentStatus.value = '请填写昵称，评论需为 2-2000 个字'; return; } const payload = { postSlug: post.value.slug, parentId: replyTo.value?.id || null, authorName: comment.value.name.trim(), content: comment.value.content.trim() }; try { await submitComment(payload); } catch { const nextComments = [{ ...payload, id: Date.now(), status: 'PENDING', createdAt: new Date().toISOString() }, ...comments.value]; comments.value = nextComments; localStorage.setItem(`signal-comments-${post.value.slug}`, JSON.stringify(nextComments)); } comment.value = { name: '', content: '' }; replyTo.value = null; commentStatus.value = '评论已提交，审核通过后会显示'; }
+async function addComment() { if (!comment.value.name.trim() || comment.value.content.trim().length < 2 || comment.value.content.length > 2000) { commentStatus.value = '请填写昵称，评论需为 2-2000 个字'; return; } const payload = { postSlug: post.value.slug, parentId: replyTo.value?.id || null, authorName: comment.value.name.trim(), content: comment.value.content.trim() }; try { await submitComment(payload); comment.value = { name: '', content: '' }; replyTo.value = null; commentStatus.value = '评论已提交，审核通过后会显示'; } catch (error) { commentStatus.value = error.message || '评论提交失败，请稍后重试'; } }
 function startReply(item){replyTo.value=item;commentStatus.value=`正在回复 ${item.authorName || item.name}`;document.querySelector('.comment-form input')?.focus();}
 async function reportComment(item){if(item.reported){commentStatus.value='这条评论已经举报过';return;}try{const result=await apiRequest(`/comments/${item.id}/report`,{method:'POST',body:JSON.stringify({reason:'内容不当'})});item.reported=true;commentStatus.value=result.message;}catch{commentStatus.value='举报提交失败，请稍后重试';}}
 </script>

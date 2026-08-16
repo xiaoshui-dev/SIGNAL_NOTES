@@ -1,0 +1,37 @@
+ALTER TABLE subscriptions
+  ADD COLUMN confirmation_token VARCHAR(64) NULL,
+  ADD COLUMN confirmed_at TIMESTAMP(6) NULL,
+  ADD COLUMN unsubscribed_at TIMESTAMP(6) NULL,
+  ADD COLUMN updated_at TIMESTAMP(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6),
+  ADD UNIQUE INDEX uk_subscriptions_confirmation_token (confirmation_token);
+
+INSERT INTO site_settings (setting_key, setting_value) VALUES
+  ('siteShortName', 'SIGNAL NOTES'),
+  ('siteTagline', '把复杂技术讲清楚'),
+  ('heroEyebrow', 'TECH NOTES / 2026'),
+  ('heroTitle', '把复杂技术讲清楚'),
+  ('heroSummary', '关于 AI、软件工程、系统与数字世界的长期记录。少一点噪声，多一点真正有用的理解。'),
+  ('landingTopics', '[{"number":"01","name":"人工智能","summary":"模型、产品与人机协作"},{"number":"02","name":"软件工程","summary":"架构、代码与团队实践"},{"number":"03","name":"系统设计","summary":"性能、可靠性与基础设施"},{"number":"04","name":"数字生活","summary":"工具、阅读与个人工作流"}]'),
+  ('aboutTitle', '写给愿意慢下来理解技术的人。'),
+  ('aboutLead', '脉冲笔记关注技术背后的结构、取舍和真实影响。'),
+  ('aboutBody', '这里没有追逐热点的速报，只有经过实践、验证和反思之后的记录。'),
+  ('contactTitle', '把问题、想法或合作方向告诉我。'),
+  ('contactIntro', '如果你发现文章中的错误，或者有值得长期讨论的技术问题，欢迎留下消息。'),
+  ('publicEmail', 'hello@signal-notes.local'),
+  ('replyPromise', '通常会在 3 个工作日内回复。'),
+  ('privacyContent', '我们只收集完成联系、评论和订阅所必需的信息，不出售个人数据。'),
+  ('footerDescription', '关于 AI、系统与数字世界的独立技术博客。'),
+  ('copyrightText', '© 2026 Signal Notes'),
+  ('licenseText', '内容以 CC BY-NC-SA 4.0 发布'),
+  ('subscribeTitle', '每两周，收到一封有用的信。'),
+  ('subscribeDescription', '只发送新文章和真正值得分享的链接，不追踪打开行为。'),
+  ('mail.enabled', 'false'),
+  ('mail.host', ''),
+  ('mail.port', '587'),
+  ('mail.username', ''),
+  ('mail.password', ''),
+  ('mail.from', ''),
+  ('mail.notificationTo', ''),
+  ('mail.starttls', 'true'),
+  ('mail.auth', 'true')
+ON DUPLICATE KEY UPDATE setting_key = VALUES(setting_key);

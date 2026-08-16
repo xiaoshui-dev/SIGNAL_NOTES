@@ -672,6 +672,41 @@ body::before { content: ''; position: fixed; z-index: 100; top: 0; left: 0; widt
 .quick-action-list > div > span:not(.quick-action-buttons) { color: var(--ink-soft); font: 500 9px/1 'IBM Plex Mono', monospace; }
 .quick-action-buttons { display: flex; align-items: center; gap: 6px; }
 .quick-action-buttons .icon-button { width: 32px; height: 32px; }
+.inbox-list article { padding: 24px 22px; border-bottom: 1px solid var(--line); }
+.inbox-list article:last-child { border-bottom: 0; }
+.inbox-list article > header, .inbox-list article > footer { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+.inbox-list article > header strong, .inbox-list article > header span { display: block; }
+.inbox-list article > header strong { font-size: 14px; }
+.inbox-list article > header span, .inbox-list article time, .inbox-list article code { color: var(--ink-soft); font-size: 10px; }
+.inbox-list article > header span { margin-top: 6px; }
+.inbox-list article > p { margin: 18px 0; white-space: pre-wrap; color: var(--ink-soft); font-size: 13px; line-height: 1.8; }
+.inbox-list article > footer { justify-content: flex-start; }
+.inbox-list select, .subscriber-list select { min-height: 34px; padding: 0 8px; border: 1px solid var(--line); background: transparent; color: var(--ink); font-size: 11px; }
+.inbox-list .icon-button, .subscriber-list .icon-button { width: 34px; height: 34px; }
+.subscriber-toolbar { display: flex; align-items: end; gap: 12px; padding: 20px 22px; border-bottom: 1px solid var(--line); }
+.subscriber-toolbar label { display: grid; gap: 7px; color: var(--ink-soft); font: 500 10px/1 'IBM Plex Mono', monospace; }
+.subscriber-toolbar input { min-height: 36px; min-width: min(340px, 48vw); padding: 0 9px; border: 1px solid var(--line); background: transparent; color: var(--ink); font-size: 12px; }
+.subscriber-list > div { min-height: 62px; display: grid; grid-template-columns: minmax(0, 1fr) 120px 40px; align-items: center; gap: 16px; padding: 0 22px; border-bottom: 1px solid var(--line); }
+.subscriber-list strong, .subscriber-list small { display: block; }
+.subscriber-list small { margin-top: 6px; color: var(--ink-soft); font-size: 10px; }
+.user-create-form { display: grid; grid-template-columns: 1fr 1.4fr 120px 120px auto; align-items: center; gap: 8px; padding: 20px 22px; border-bottom: 1px solid var(--line); }
+.user-create-form input, .user-create-form select, .user-management-list input, .user-management-list select { min-width: 0; min-height: 36px; padding: 0 8px; border: 1px solid var(--line); background: transparent; color: var(--ink); font-size: 11px; }
+.user-management-list > div { display: grid; grid-template-columns: 1fr 1.4fr 120px 120px 76px; align-items: center; gap: 8px; padding: 12px 22px; border-bottom: 1px solid var(--line); }
+.user-management-list .icon-button { width: 32px; height: 32px; }
+.section-users > .admin-page-header, .section-users > .admin-panel:has(.user-table) { display: none; }
+.section-inbox > .admin-page-header, .section-inbox > .log-status-grid, .section-inbox > .operations-grid, .section-subscribers > .admin-page-header, .section-subscribers > .log-status-grid, .section-subscribers > .operations-grid { display: none; }
+.mail-settings-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; padding: 22px; }
+.mail-settings-grid label { display: grid; gap: 8px; color: var(--ink-soft); font: 500 10px/1 'IBM Plex Mono', monospace; }
+.mail-settings-grid input:not([type="checkbox"]) { min-height: 38px; padding: 0 9px; border: 1px solid var(--line); background: transparent; color: var(--ink); font-size: 11px; }
+.mail-settings-grid .mail-enabled { display: flex; align-items: center; gap: 8px; color: var(--ink); }
+.mail-settings-grid input[type="checkbox"] { width: 16px; height: 16px; accent-color: var(--signal); }
+.mail-settings-actions { display: flex; align-items: center; gap: 8px; padding: 0 22px 22px; }
+.mail-settings-actions input { min-height: 38px; min-width: 220px; padding: 0 9px; border: 1px solid var(--line); background: transparent; color: var(--ink); font-size: 11px; }
+.public-copy-panel { margin-top: 18px; }
+.public-copy-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; padding: 22px; }
+.public-copy-grid label { display: grid; gap: 8px; color: var(--ink-soft); font: 500 10px/1 'IBM Plex Mono', monospace; }
+.public-copy-grid label.wide { grid-column: 1 / -1; }
+.public-copy-grid input, .public-copy-grid textarea { width: 100%; min-width: 0; padding: 9px; border: 1px solid var(--line); background: transparent; color: var(--ink); outline: 0; font-size: 12px; resize: vertical; }
 .admin-empty { padding: 65px; color: var(--ink-soft); text-align: center; font-size: 12px; }
 .editor-page { width: min(1440px, calc(100% - 72px)); padding-top: 24px; }
 .editor-top { min-height: 58px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--line); }
