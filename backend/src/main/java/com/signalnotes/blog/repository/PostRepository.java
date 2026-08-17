@@ -10,6 +10,7 @@ public interface PostRepository extends JpaRepository<Post, Long> {
     boolean existsBySlugAndIdNot(String slug, Long id);
     long countByStatus(PostStatus status);
     long countByCover(String cover);
+    List<Post> findByAuthorIsNullAndAuthorNameIn(Collection<String> authorNames);
     List<Post> findByStatusAndScheduledAtBefore(PostStatus status, java.time.Instant now);
     List<Post> findTop5ByStatusOrderByViewsDesc(PostStatus status);
     @Query("""

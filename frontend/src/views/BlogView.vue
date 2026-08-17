@@ -4,7 +4,9 @@ import { computed, onMounted, ref, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import BlogHeader from "../components/BlogHeader.vue";
 import BlogFooter from "../components/BlogFooter.vue";
-import { formatDate, getAuthor } from "../data";
+import PixelAvatar from "../components/PixelAvatar.vue";
+import { formatDate } from "../date";
+import { authorInitials, resolveAuthorName } from "../authorIdentity";
 import {
   loadCategories,
   loadPosts,
@@ -80,12 +82,12 @@ const routeCategory = computed(() => resolveTaxonomy(categories.value, routeSlug
 const routeCategoryPosts = computed(() => postsForTaxonomy(items.value, routeCategory.value, "category"));
 const routeTag = computed(() => resolveTaxonomy(tags.value, routeSlug.value));
 const routeTagPosts = computed(() => postsForTaxonomy(items.value, routeTag.value, "tag"));
-const routeAuthor = computed(() => ({
-  ...getAuthor(route.params.id),
-  name: site.authorName,
-  role: site.authorRole,
-  bio: site.authorBio,
-}));
+const authorPosts = computed(() => items.value.filter((item) => String(item.authorId || '') === String(route.params.id || '')));
+const routeAuthor = computed(() => {
+  const source = authorPosts.value[0];
+  const name = resolveAuthorName(source?.authorName, site.authorName);
+  return { id: source?.authorId || route.params.id || 'account', name, initials: authorInitials(name), avatarUrl: source?.authorAvatarUrl || '', role: site.authorRole, bio: site.authorBio };
+});
 const filtered = computed(() =>
   topic.value
     ? items.value.filter(
@@ -229,7 +231,7 @@ async function doContact() {
           </div>
           <p>{{ site.blogIntro }}</p>
         </section>
-        <section class="filter-bar">
+        <section class="filter-bar terminal-filter" aria-label="文章分类命令条">
           <button :class="{ active: !topic }" @click="router.push('/blog')">
             {{ site.blogFilterAllLabel }}
             <span>{{ items.length }}</span></button
@@ -251,6 +253,7 @@ async function doContact() {
             class="post-card"
             :class="{ 'is-large': index === 0 && !topic }"
           >
+            <span class="post-scan-number" aria-hidden="true">{{ String(index + 1).padStart(2, '0') }}</span>
             <RouterLink class="post-card-cover" :to="`/blog/posts/${post.slug}`"
               ><img :src="post.cover" :alt="post.coverAlt"
             /></RouterLink>
@@ -544,20 +547,18 @@ async function doContact() {
           <h1>{{ routeAuthor.name }}</h1>
           <p>
             {{ routeAuthor.role }} ·
-            {{ site.authorPostCountLabel.replace('{count}', items.filter((item) => item.authorId === route.params.id).length) }}
+            {{ site.authorPostCountLabel.replace('{count}', authorPosts.length) }}
           </p>
         </header>
         <section class="about-page-grid">
           <div class="about-monogram">
-            {{ routeAuthor.initials }}<span>{{ site.authorSectionLabel }}</span>
+            <PixelAvatar :name="routeAuthor.name" :avatar-url="routeAuthor.avatarUrl" :size="112" /><span>{{ site.authorSectionLabel }}</span>
           </div>
           <div>
             <p class="about-lead">{{ routeAuthor.bio }}</p>
             <section class="post-list compact-post-list">
               <article
-                v-for="post in items.filter(
-                  (item) => item.authorId === route.params.id,
-                )"
+                v-for="post in authorPosts"
                 :key="post.id"
                 class="post-card"
               >

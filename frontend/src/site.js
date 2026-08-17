@@ -39,7 +39,7 @@ export const site = reactive({
   status500Label: '500 / SYSTEM PAUSED', status500Title: '服务暂时没有回应。', status500Description: '可以重试一次，或返回博客继续浏览已缓存的内容。',
   status503Label: 'MAINTENANCE / BACK SOON', status503Title: '站点正在进行短暂维护。', status503Description: '预计很快恢复，RSS 和已分享的文章链接仍然有效。',
   statusDefaultLabel: '404 / LOST SIGNAL', statusDefaultTitle: '这个页面没有找到。', statusDefaultDescription: '从博客首页继续阅读。',
-  authorName: '林默', authorRole: '软件工程师 / 独立写作者', authorBio: '关注 AI 系统、软件架构与数字工具，喜欢把复杂问题拆成可以验证的步骤。',
+  authorName: '站点作者', authorRole: '软件工程师 / 独立写作者', authorBio: '关注 AI 系统、软件架构与数字工具，喜欢把复杂问题拆成可以验证的步骤。',
   footerDescription: '关于 AI、系统与数字世界的独立技术博客。', copyrightText: '© 2026 Signal Notes', licenseText: '内容以 CC BY-NC-SA 4.0 发布',
   subscribeTitle: '每两周，收到一封有用的信。', subscribeDescription: '只发送新文章和真正值得分享的链接，不追踪打开行为。',
   shareTemplate: 'landscape',

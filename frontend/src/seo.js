@@ -1,4 +1,5 @@
 import { site } from './site';
+import { resolveAuthorName } from './authorIdentity';
 
 function upsert(name, content, attribute = 'name') {
   if (!content) return;
@@ -20,6 +21,6 @@ export function setPageSeo({ title = `${site.siteName} | ${site.siteShortName}`,
 export function setArticleJsonLd(article) {
   const id = 'signal-article-jsonld'; document.getElementById(id)?.remove();
   const script = document.createElement('script'); script.id = id; script.type = 'application/ld+json';
-  script.textContent = JSON.stringify({ '@context': 'https://schema.org', '@type': 'Article', headline: article.title, description: article.excerpt, datePublished: article.publishedAt, dateModified: article.updatedAt, author: { '@type': 'Person', name: article.authorName || '林默' }, mainEntityOfPage: article.canonicalUrl || window.location.href, image: article.cover ? [new URL(article.cover, window.location.origin).href] : [] });
+  script.textContent = JSON.stringify({ '@context': 'https://schema.org', '@type': 'Article', headline: article.title, description: article.excerpt, datePublished: article.publishedAt, dateModified: article.updatedAt, author: { '@type': 'Person', name: resolveAuthorName(article.authorName, site.authorName) }, mainEntityOfPage: article.canonicalUrl || window.location.href, image: article.cover ? [new URL(article.cover, window.location.origin).href] : [] });
   document.head.appendChild(script);
 }

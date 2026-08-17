@@ -167,7 +167,8 @@ Describe 'Signal Notes launcher files' {
     It 'does not require pnpm in the container frontend build' {
         $dockerfile = Get-Content -Raw (Join-Path $projectRoot 'frontend/Dockerfile')
         $dockerfile | Should Not Match '(?i)pnpm'
-        $dockerfile | Should Match '(?i)npm install'
+        $dockerfile | Should Match 'COPY package\.json package-lock\.json \./'
+        $dockerfile | Should Match '(?i)npm ci'
         $dockerfile | Should Match '(?i)npm run build'
     }
 
@@ -224,16 +225,17 @@ Describe 'Signal Notes launcher files' {
 
     It 'keeps communication notices and sanitized mail settings in sync' {
         $adminView = Get-Content -Raw (Join-Path $projectRoot 'frontend/src/views/AdminView.vue')
+        $mailTest = Get-Content -Raw (Join-Path $projectRoot 'frontend/src/mailTest.js')
         $adminView | Should Match "async function loadAdminData\(\) \{\s+const settingsVersionAtLoad = settingsMutationVersion;\s+saved\.value = '';"
         $adminView | Should Match "const savedSettings = await adminRequest\('/admin/settings'"
         $adminView | Should Match 'settings\.value = \{ \.\.\.settings\.value, \.\.\.savedSettings \};'
-        $adminView | Should Match "const tone = result\.sent \? 'success' : result\.configured \? 'error' : 'info';"
-        $adminView | Should Match "flash\(result\.message \|\| '测试邮件已处理', tone\);"
+        $mailTest | Should Match "tone: result\.sent \? 'success' : result\.configured \? 'error' : 'info'"
+        $adminView | Should Match "flash\(result\.message, result\.tone\);"
     }
 
     It 'gates settings writes on a successful settings load' {
         $adminView = Get-Content -Raw (Join-Path $projectRoot 'frontend/src/views/AdminView.vue')
-        $adminView | Should Match "async function saveSettings\(\) \{ if \(adminLoading\.value \|\| adminLoadError\.value\) return;"
+        $adminView | Should Match "if \(adminLoading\.value \|\| adminLoadError\.value\) throw new Error"
         $adminView | Should Match ':disabled="adminLoading \|\| Boolean\(adminLoadError\)( \|\| settingsSaving)?"'
         $adminView | Should Match '正在加载站点设置'
         $adminView | Should Match '站点设置加载失败'
@@ -245,7 +247,7 @@ Describe 'Signal Notes launcher files' {
     It 'guards concurrent communication updates and duplicate settings saves' {
         $adminView = Get-Content -Raw (Join-Path $projectRoot 'frontend/src/views/AdminView.vue')
         $adminView | Should Match 'const settingsSaving = ref\(false\)'
-        $adminView | Should Match 'if \(settingsSaving\.value\) return;'
+        $adminView | Should Match "if \(settingsSaving\.value\) throw new Error"
         $adminView | Should Match ':disabled="adminLoading \|\| Boolean\(adminLoadError\) \|\| settingsSaving"'
         $adminView | Should Match 'settingsSaving \? .保存中'
         $adminView | Should Match 'const contactUpdateGenerations = new Map\(\)'
@@ -376,7 +378,7 @@ Describe 'Signal Notes public reading experience guards' {
 
     It 'refreshes open share posters and falls back when system share rejects' {
         $poster = Get-Content -Raw (Join-Path $projectRoot 'frontend/src/components/SharePoster.vue')
-        $poster | Should Match 'watch\(\[open, variant'
+        $poster | Should Match 'watch\(\[\s*open, variant'
         $poster | Should Match 'site\.siteShortName'
         $poster | Should Match 'async function systemShare'
         $poster | Should Match 'catch \{ await copy\(\); \}'

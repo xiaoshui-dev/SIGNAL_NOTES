@@ -77,9 +77,17 @@ class ApiIntegrationTests {
         Post post = posts.findBySlug("test-post").orElseThrow();
         post.setCover(url);
         posts.saveAndFlush(post);
+        SiteUser account = siteUsers.findByLoginName("admin").orElseThrow();
+        account.setAvatarUrl(url);
+        siteUsers.saveAndFlush(account);
         mvc.perform(get("/api/media")).andExpect(status().isOk())
             .andExpect(jsonPath("$[0].referenceCount").value(1))
+            .andExpect(jsonPath("$[0].avatarReference").value(true))
             .andExpect(jsonPath("$[0].deletable").value(false));
+        mvc.perform(delete("/api/admin/media/{id}", id).with(auth)).andExpect(status().isConflict())
+            .andExpect(jsonPath("$.message").value("媒体正在用作账户头像，请先更换或清除头像"));
+        account.setAvatarUrl(null);
+        siteUsers.saveAndFlush(account);
         mvc.perform(delete("/api/admin/media/{id}", id).with(auth)).andExpect(status().isBadRequest())
             .andExpect(jsonPath("$.message").value(org.hamcrest.Matchers.containsString("1 篇文章")));
         post.setCover(null);
@@ -101,6 +109,52 @@ class ApiIntegrationTests {
         } finally {
             userDetails.changePassword("admin", passwordEncoder.encode("signal2026"));
         }
+    }
+
+    @Test void currentAccountProfileOwnsNewPostIdentity() throws Exception {
+        var auth = org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.httpBasic("admin", "signal2026");
+        SiteUser account = siteUsers.findByLoginName("admin").orElseThrow();
+        String originalName = account.getName();
+        try {
+            mvc.perform(put("/api/admin/account/profile").with(auth).contentType(MediaType.APPLICATION_JSON)
+                    .content("{\"name\":\"Sheldon\",\"avatarUrl\":\"/uploads/avatar.png\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.name").value("Sheldon"))
+                .andExpect(jsonPath("$.avatarUrl").value("/uploads/avatar.png"));
+
+            mvc.perform(post("/api/admin/posts").with(auth).contentType(MediaType.APPLICATION_JSON).content("""
+                    {"slug":"owned-author","title":"账户作者","excerpt":"摘要","content":"正文内容","category":"系统设计","tags":[],"status":"DRAFT","authorName":"不能伪造的名字","readMinutes":3}
+                    """))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.authorId").value(account.getId()))
+                .andExpect(jsonPath("$.authorName").value("Sheldon"))
+                .andExpect(jsonPath("$.authorAvatarUrl").value("/uploads/avatar.png"));
+            Post stored = posts.findBySlug("owned-author").orElseThrow();
+            Assertions.assertEquals(account.getId(), stored.getAuthor().getId());
+            Assertions.assertEquals("Sheldon", stored.getAuthorName());
+
+            mvc.perform(get("/api/admin/me").with(auth))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(account.getId()))
+                .andExpect(jsonPath("$.name").value("Sheldon"))
+                .andExpect(jsonPath("$.avatarUrl").value("/uploads/avatar.png"));
+        } finally {
+            mvc.perform(put("/api/admin/account/profile").with(auth).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"name\":\"" + originalName + "\",\"avatarUrl\":\"\"}"));
+        }
+    }
+
+    @Test void accountProfileRejectsExternalAvatarUrls() throws Exception {
+        var auth = org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.httpBasic("admin", "signal2026");
+        SiteUser account = siteUsers.findByLoginName("admin").orElseThrow();
+        String originalAvatar = account.getAvatarUrl();
+
+        mvc.perform(put("/api/admin/account/profile").with(auth).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"name\":\"" + account.getName() + "\",\"avatarUrl\":\"https://example.com/avatar.png\"}"))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.message").value("头像必须来自本地媒体库"));
+
+        Assertions.assertEquals(originalAvatar, siteUsers.findByLoginName("admin").orElseThrow().getAvatarUrl());
     }
 
     @Test void publicPostApiReturnsPublishedContent() throws Exception {

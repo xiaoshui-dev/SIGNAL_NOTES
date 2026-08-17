@@ -1,6 +1,13 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { resolveShareUrl } from '../src/shareUrl.js';
+import { canonicalShareUrl, resolveShareUrl } from '../src/shareUrl.js';
+
+test('canonical share URL removes tracking state', () => {
+  assert.equal(
+    canonicalShareUrl('https://notes.example.com/blog/posts/a?utm_source=x#share'),
+    'https://notes.example.com/blog/posts/a',
+  );
+});
 
 test('uses a valid configured canonical URL for sharing and QR codes', () => {
   assert.equal(
