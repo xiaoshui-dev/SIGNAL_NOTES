@@ -29,7 +29,7 @@ export function authorInitials(name) {
 
 export function resolveAvatarUrl({ uploadedAvatarUrl, name } = {}) {
   const uploaded = normalized(uploadedAvatarUrl);
-  if (uploaded) return uploaded;
+  if (uploaded.startsWith('/uploads/')) return uploaded;
   const seed = resolveAuthorName(name).toLocaleLowerCase('zh-CN');
   return createAvatar(pixelArt, {
     seed: [seed],

@@ -45,7 +45,7 @@
 | --- | --- |
 | `frontend` | 前端静态页面 |
 | `backend/signal-notes-blog.jar` | Java 后端程序 |
-| `database/signal_notes.sql` | 当前文章和站点内容 |
+| `database/signal_notes_mysql57.sql` | MySQL 5.7 兼容的当前文章和站点内容 |
 | `uploads` | 后台上传图片的保存目录 |
 | `README-宝塔纯面板部署.md` | 当前这份纯面板教程 |
 

@@ -383,8 +383,8 @@ async function runBackup() { try { flash('正在导出并校验备份', 'info');
             <PixelAvatar :name="displayAdminIdentity(currentUser)" :avatar-url="currentUser.avatarUrl" :size="88" />
             <div class="identity-fields">
               <label>账户姓名<input v-model="currentUser.name" maxlength="80" autocomplete="name" /></label>
-              <label>头像地址<input v-model="currentUser.avatarUrl" maxlength="500" placeholder="留空使用 DiceBear 像素头像" /></label>
               <label v-if="media.length">从媒体库选择<select v-model="currentUser.avatarUrl"><option value="">使用自动生成头像</option><option v-for="item in media" :key="item.id" :value="item.url">{{ item.filename }}</option></select></label>
+              <p v-else class="identity-avatar-note">上传一张图片，或继续使用自动生成的 DiceBear 像素头像。</p>
             </div>
             <div class="identity-actions"><label class="button"><Upload :size="15" />上传头像<input type="file" hidden accept="image/jpeg,image/png,image/webp" @change="uploadAvatar" /></label><button class="button button-primary" :disabled="accountSaving"><Save :size="15" />{{ accountSaving ? '保存中…' : '保存账户资料' }}</button></div>
           </form>

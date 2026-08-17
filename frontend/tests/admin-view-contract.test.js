@@ -19,3 +19,10 @@ test('admin operations expose nearby busy and result states', () => {
   assert.match(admin, /:aria-busy="mailTestStatus\.pending"/);
   assert.match(admin, /admin-notice/);
 });
+
+test('account avatar controls only expose generated or local media sources', () => {
+  assert.doesNotMatch(admin, /头像地址/);
+  assert.match(admin, /从媒体库选择/);
+  assert.match(admin, /uploadAvatar/);
+  assert.match(admin, /使用自动生成头像/);
+});

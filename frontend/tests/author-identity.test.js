@@ -37,6 +37,12 @@ test('uploaded avatars win and generated pixel avatars are deterministic local d
   assert.doesNotMatch(first, /api\.dicebear\.com/);
 });
 
+test('external avatar URLs fall back to a generated local pixel avatar', () => {
+  const resolved = resolveAvatarUrl({ uploadedAvatarUrl: 'https://example.com/avatar.png', name: 'Sheldon' });
+  assert.match(resolved, /^data:image\/svg\+xml/);
+  assert.doesNotMatch(resolved, /example\.com/);
+});
+
 test('account identity is rendered consistently across public and admin surfaces', () => {
   const admin = readFileSync(new URL('../src/views/AdminView.vue', import.meta.url), 'utf8');
   const article = readFileSync(new URL('../src/views/ArticleView.vue', import.meta.url), 'utf8');

@@ -144,6 +144,19 @@ class ApiIntegrationTests {
         }
     }
 
+    @Test void accountProfileRejectsExternalAvatarUrls() throws Exception {
+        var auth = org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.httpBasic("admin", "signal2026");
+        SiteUser account = siteUsers.findByLoginName("admin").orElseThrow();
+        String originalAvatar = account.getAvatarUrl();
+
+        mvc.perform(put("/api/admin/account/profile").with(auth).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"name\":\"" + account.getName() + "\",\"avatarUrl\":\"https://example.com/avatar.png\"}"))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.message").value("头像必须来自本地媒体库"));
+
+        Assertions.assertEquals(originalAvatar, siteUsers.findByLoginName("admin").orElseThrow().getAvatarUrl());
+    }
+
     @Test void publicPostApiReturnsPublishedContent() throws Exception {
         mvc.perform(get("/api/posts")).andExpect(status().isOk()).andExpect(jsonPath("$[0].slug").value("test-post"));
         mvc.perform(get("/api/posts/test-post")).andExpect(status().isOk()).andExpect(jsonPath("$.title").value("测试文章"));
